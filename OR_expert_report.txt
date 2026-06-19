@@ -1,0 +1,51 @@
+# Operations Research Expert Report: Analysis of Active Learning for eXplainable AI (AL-XAI)
+
+**Context:** Analysis of the derivative-free exploration strategies and active learning loop for complex systems, with a focus on the `al_tp_v3.py` implementation mapping the Schelling Agent-Based Model (ABM).
+
+---
+
+## 1. Introduction and Framework Decomposition
+
+From an Operations Research and Derivative-Free Optimization perspective, the provided framework tackles the notoriously difficult problem of exploring computationally expensive, non-differentiable black-box models (in this case, Agent-Based Models like Schelling Segregation). 
+
+The algorithm implements a novel **Explanatory Diversity Sampling (EDS)** active learning loop. It does not merely seek the global optimum or map the objective function globally; instead, it actively searches for points that produce *novel model explanations*. 
+
+### A. Surrogate Modeling and the Prediction Space
+Because the underlying simulator is a black-box, the framework employs Kriging (Gaussian Process Regression) as the primary surrogate model (`sm = KRG(...)`). Kriging provides both a mean prediction (the surrogate physics) and a variance prediction (the model uncertainty, `sigma`), which is standard in derivative-free optimization and Bayesian Optimization.
+
+### B. The "Explanation Space" and SHAP KDE
+The true innovation lies in the transformation from the Input Space to the "Explanation Space". 
+1. **SHAP as a Latent Space:** At each iteration, the framework evaluates the surrogate model's behavior using SHapley Additive exPlanations (SHAP). This projects every design point into a space of feature contributions.
+2. **Kernel Density Estimation (KDE) with Repulsion:** A KDE is applied to these SHAP values to compute an "Explanatory Density." To prevent boundary artifacts, a "Soft Folding" technique is used. Furthermore, a custom distance-based *repulsion force* is injected: `repulsion_distance = 0.2 * np.exp(-facteur_chute * min_distances)`. This artificially inflates the density around previously sampled explanations, severely penalizing the algorithm for re-sampling points that behave similarly to known points, even if they are far apart in the input space.
+3. **Multi-Fidelity Kriging (MFK):** A secondary surrogate model (`surro = MFK(...)`) is trained to map the input space $X$ directly to this SHAP density. 
+
+### C. The Hybrid Acquisition Function
+The active learning acquisition function is formulated as a bounded minimization problem solved by SLSQP. It combines two competing objectives:
+1. **Explanatory Novelty:** Measured by the Expected Improvement (EI) of the density prediction. Minimizing density (maximizing EI) drives the search toward unexplored regions of the *Explanation Space*.
+2. **Model Uncertainty:** Measured by the Kriging variance (`weighted_sigma`), ensuring the primary surrogate model remains accurate globally.
+3. **Spatial Prior:** A Gaussian prior (`p_x`) suppresses uncertainty near the boundaries, forcing exploration toward the center of the design space.
+
+The final objective is a weighted sum controlled by `alpha`: `Hybrid Score = alpha * EI_density + (1 - alpha) * weighted_sigma`.
+
+---
+
+## 2. Handling Non-Differentiable Black-Box Models
+
+Agent-Based Models (ABMs) are discrete, highly non-linear, and inherently non-differentiable. Traditional gradient-based optimization methods (e.g., SQP, interior-point methods) fail completely on ABMs.
+
+The framework circumvents this via a classic OR decoupling strategy:
+1. **Surrogate-based Smoothing:** The discrete ABM output is smoothed by a Kriging surrogate. 
+2. **Derivative-Free Explanation:** SHAP is model-agnostic and relies on combinatorial feature perturbation, requiring no gradients from the underlying ABM.
+3. **Continuous Optimization:** The SLSQP optimizer acts solely upon the analytical formulations of the Kriging and MFK models (which are differentiable), never directly on the ABM. This guarantees fast convergence of the acquisition function without running into stochastic noise or discontinuity issues inherent to ABMs.
+
+---
+
+## 3. Explanatory Diversity Sampling vs. Traditional Methods
+
+### A. vs. Stepwise Uncertainty Reduction (SUR)
+- **SUR Strategy:** SUR algorithms are designed to reduce uncertainty regarding a specific feature of the objective function (e.g., the volume of excursion above a threshold, or the location of a contour line/Pareto front). SUR focuses purely on the *Objective Space*.
+- **EDS Strategy:** This framework focuses on the *Explanation Space*. Two points in the input space might yield the exact same objective value with identical prediction variance. A SUR algorithm would treat them as equally (un)interesting. However, if those two points reach that objective via entirely different reasoning paths (different SHAP profiles), EDS will actively seek them out to uncover the differing underlying mechanisms. EDS reduces "reasoning uncertainty" rather than just output uncertainty.
+
+### B. vs. Static Design of Experiments (e.g., LHS)
+- **Static DoE:** Methods like Latin Hypercube Sampling (LHS) aim to uniformly cover the *Input Space* ($X$). They are open-loop (static) and blind to the system's behavior.
+- **EDS Active Learning:** Because ABMs often exhibit highly non-linear phase transitions (e.g., sudden gridlock in Schelling segregation), a uniform spread in the input space usually results in a highly skewed, non-uniform distribution in the explanation space. By actively computing the Shannon Entropy and CV NND (Coefficient of Variation of Nearest Neighbor Distance) of the SHAP values, this framework proves that actively targeting novel explanations yields a much more uniform coverage of the *System Behaviors* than LHS, making it vastly superior for Complex Systems Exploration where mapping emergent behaviors is the goal.
