@@ -1,0 +1,6 @@
+Offrir un meilleur prix à un acheteur qui a déjà conclu plusieurs contrats avec ce vendeur
+réduire le nb d'offre des vendeurs en filtrant les acheteurs (distance max, fidélité)
+évaluer la distance moyenne parcourue par unité échangée
+Temporalité individualisée des agents
+Analyse de la puissance des acteurs
+étudier l’effet des structures spatiales (uniforme vs cluster vs réel), deux analyses séparées (Sobol par scénario spatial) ou encode la topologie via un indice continu
