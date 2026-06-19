@@ -40,7 +40,7 @@ Simulations are configured using YAML files. An example configuration file (`con
 
 To run a simulation:
 ```bash
-python cireco/run.py conf_example.yaml
+python scripts/run.py conf_example.yaml
 ```
 
 #### `data/products.csv` 
@@ -59,7 +59,7 @@ You need to provide a product file that lists all available products and their c
 Simulation results, including plots and regret analysis data, are saved in the directory specified by `processed_path` in the configuration file.
 
 ## Project Structure
-The core simulation logic resides in the `cireco/` directory:
+The core simulation logic resides in the `src/` directory:
 
 - `agent.py`: Defines the `Agent` class, representing market participants (buyers and sellers) and their learning mechanisms.
 - `area.py`: Defines the `SquareArea` class, used for defining the geographical space of the simulation.
