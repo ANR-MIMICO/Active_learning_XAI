@@ -240,7 +240,7 @@ _sampling = lambda n: sampling(n)
 
     
 
-total_loops = 5
+total_loops = 2
 
 for loop in range(total_loops):
     print(f"LOOP {loop + 1}/{total_loops}")
