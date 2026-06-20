@@ -260,14 +260,14 @@ def custom_beeswarm_plot(shap_vals, feature_vals, feature_names, title="SHAP Bee
     cbar.set_ticklabels(['Low', 'High'])
     
     plt.tight_layout()
-    plt.show()
+    # plt.show()
 
 # --- USAGE ---
 
 
 current_file_path = os.path.abspath(__file__)[-15]
 # Specify the directory containing the files
-folder_path = current_file_path[:-15]+'doe_5_200'
+folder_path = os.path.join(os.path.dirname(__file__), '..', 'doe_5_200')
 
 DATABASEy = []
 DATABASEx = []
@@ -280,7 +280,7 @@ for filename in os.listdir(folder_path):
         # Open the file
         with open(file_path, 'r') as file:
             last_line = file.readlines()[-1]
-            DATABASEx.append(np.array(file_path[10:-11].split('_'),dtype=np.float64))
+            DATABASEx.append(np.array(filename[:-11].split('_'),dtype=np.float64))
             DATABASEy.append(np.array([bool(last_line.split(',')[0].lower() =="true"),float(last_line.split(',')[1])]))
 DATABASEy = np.array(DATABASEy)
 DATABASEx = np.array(DATABASEx)
@@ -696,7 +696,7 @@ output_file = "doe_evolution3.gif"
 ani.save(output_file, writer='pillow', fps=10)
 
 print(f"Done! Saved as {output_file}")
-# plt.show() # Uncomment to view in real-time instead of saving
+# # plt.show() # Uncomment to view in real-time instead of saving
 print(np.quantile(DATABASEx[:,2],0.75)-np.quantile(DATABASEx[:,2],0.25))
 
 

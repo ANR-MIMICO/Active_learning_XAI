@@ -121,7 +121,7 @@ def explicit_ei(x, model, y_min, return_grad=False):
 
 current_file_path = os.path.abspath(__file__)[-15]
 # Specify the directory containing the files
-folder_path = current_file_path[:-15]+'doe_5_200'
+folder_path = os.path.join(os.path.dirname(__file__), '..', 'doe_5_200')
 
 DATABASEy = []
 DATABASEx = []
@@ -134,7 +134,7 @@ for filename in os.listdir(folder_path):
         # Open the file
         with open(file_path, 'r') as file:
             last_line = file.readlines()[-1]
-            DATABASEx.append(np.array(file_path[10:-11].split('_'),dtype=np.float64))
+            DATABASEx.append(np.array(filename[:-11].split('_'),dtype=np.float64))
             DATABASEy.append(np.array([bool(last_line.split(',')[0].lower() =="true"),float(last_line.split(',')[1])]))
 DATABASEy = np.array(DATABASEy)
 DATABASEx = np.array(DATABASEx)
@@ -363,7 +363,7 @@ for loop in range(total_loops):
 #         plt.legend()
 #         plt.grid(True, alpha=0.3)
 #         plt.tight_layout()
-#         plt.show()
+#         # plt.show()
 #     # ==========================================
 #           
 # =============================================================================
@@ -545,7 +545,7 @@ feature_names = ["Number of Types", "Density", "Intolerance threshold", "Map siz
 
 # --- CHECKPOINT SAVE ---
 # Save every iteration so you never lose data if it crashes
-save_database_to_csv(DATABASEx, DATABASEy, feature_names, filename=f"../data/processed/al_results_loop_{loop}.csv")
+save_database_to_csv(DATABASEx, DATABASEy, feature_names, filename=f"../data/processed/v3/al_results_loop_{loop}.csv")
 # -----------------------
 
 import numpy as np
@@ -1092,6 +1092,6 @@ plt.tight_layout()
 # Save and Show
 output_map_file = "../figures/analysis/input_space_comparison_5D_frontier.png"
 plt.savefig(output_map_file, dpi=300, bbox_inches='tight')
-plt.show()
+# plt.show()
 
 print(f"Done! Saved as {output_map_file}")
