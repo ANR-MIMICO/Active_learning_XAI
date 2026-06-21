@@ -23,8 +23,7 @@ Both models follow a standardized internal structure (`data/`, `figures/`, `scri
 - **`Schelling_ABS/`**: Application of the framework to the classic Schelling Segregation Model on a 5-dimensional design space.
 - **`cireco/`**: Application to the Cireco simulation platform (a market environment simulating buyers and sellers exchanging products).
 
-### Root Level
-- Miscellaneous root scripts (e.g., `plot_entropy_curves.py`) and high-level expert proposals.
+- **`scripts/`**: Miscellaneous root scripts for cross-evaluation plotting (e.g., `plot_entropy_curves.py`).
 
 ## Methodology High-Level Overview
 
