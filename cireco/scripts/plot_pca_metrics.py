@@ -44,37 +44,38 @@ def plot_pca():
     Z = simulator(grid_unscaled)
     Z = Z.reshape(xx.shape)
     
-    methods = [("tmp_lhs_42", "LHS"), 
-               ("tmp_sur_42", "Space-US"), 
-               ("tmp_sur_shap_42", "SHAP-US"), 
-               ("tmp_v5_42", "Dynamic-US")]
+    methods = [("lhs", "LHS"), 
+               ("sur", "Space-US"), 
+               ("sur_shap", "SHAP-US"), 
+               ("v5", "Dynamic-US")]
                
-    for ax, (folder, title) in zip(axes, methods):
-        csv_path = os.path.join(results_dir, folder, "al_database.csv")
-        if not os.path.exists(csv_path):
-            csv_path = os.path.join(results_dir, folder, "al_database_loop_49.csv")
-            if not os.path.exists(csv_path):
-                continue
-        
-        df = pd.read_csv(csv_path)
-        X_all = df.iloc[:, :5].values
-        X_proj = pca.transform(scaler.transform(X_all))
-        
+    seeds = [42, 100, 2026, 777, 12345]
+    seed_colors = ['magenta', 'cyan', 'lime', 'orange', 'purple']
+               
+    for ax, (m, title) in zip(axes, methods):
         # Plot background contour
         contour = ax.contourf(xx, yy, Z, levels=20, cmap='coolwarm', alpha=0.4)
         # Highlight P=0.5 boundary
         ax.contour(xx, yy, Z, levels=[0.5], colors='black', linewidths=2, linestyles='--')
         
-        # Plot initial 30 points in grey
-        ax.scatter(X_proj[:30, 0], X_proj[:30, 1], c='grey', alpha=0.6, label='Initial DoE (30 pts)', s=40, edgecolors='white')
-        
-        # Plot added 50 points
-        if 'v4' in folder: c = 'red'
-        elif 'sur_shap' in folder: c = 'green'
-        elif 'sur' in folder: c = 'blue'
-        else: c = 'black'
-        
-        ax.scatter(X_proj[30:, 0], X_proj[30:, 1], c=c, alpha=0.9, label='Added by AL (50 pts)', s=80, edgecolors='black')
+        for seed, s_color in zip(seeds, seed_colors):
+            folder = f"tmp_{m}_{seed}"
+            csv_path = os.path.join(results_dir, folder, "al_database_loop_49.csv")
+            if not os.path.exists(csv_path):
+                csv_path = os.path.join(results_dir, folder, "al_database.csv")
+            if not os.path.exists(csv_path):
+                continue
+            
+            df = pd.read_csv(csv_path)
+            X_all = df.iloc[:, :5].values
+            X_proj = pca.transform(scaler.transform(X_all))
+            
+            # Plot initial 30 points in grey
+            if seed == seeds[0]:
+                ax.scatter(X_proj[:30, 0], X_proj[:30, 1], c='grey', alpha=0.3, label='Initial DoE', s=30, edgecolors='white')
+            
+            # Plot added 50 points
+            ax.scatter(X_proj[30:, 0], X_proj[30:, 1], c=s_color, alpha=0.8, label=f'Seed {seed}' if m == "lhs" else "", s=50, edgecolors='black', linewidths=0.5)
                    
         ax.set_title(title, fontsize=14, fontweight='bold')
         ax.set_xlabel('Principal Component 1')

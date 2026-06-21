@@ -32,11 +32,19 @@ def plot_dual_space():
             df_list_in.append(df['Entropy_Input'])
             df_list_sh.append(df['Entropy_SHAP'])
             
+        cmap_dict = {"LHS": "Greys", "SUR": "Blues", "SUR_SHAP": "Greens", "V5": "Reds"}
+        
+        # Invisible scatter for the legend
+        plt.scatter([], [], color=colors[m], label=labels[m], s=60)
+        
+        # Plot all 250 points (5 seeds * 50 iterations) with gradient
+        for df_in, df_sh in zip(df_list_in, df_list_sh):
+            iterations = np.linspace(0.3, 1.0, len(df_in))
+            plt.scatter(df_in, df_sh, c=iterations, cmap=cmap_dict[m], s=30, edgecolors='none', zorder=3, alpha=0.6)
+            
+        # Re-calculate and plot median arrows
         med_in = pd.concat(df_list_in, axis=1).median(axis=1)
         med_sh = pd.concat(df_list_sh, axis=1).median(axis=1)
-        
-        # Plot points and lines lightly
-        plt.plot(med_in, med_sh, '-o', label=labels[m], color=colors[m], markersize=4, lw=1, alpha=0.4)
         
         # Calculate vectors for quiver
         X = med_in.iloc[:-1].values
@@ -44,12 +52,9 @@ def plot_dual_space():
         U = med_in.iloc[1:].values - X
         V = med_sh.iloc[1:].values - Y
         
-        # Draw perfect arrows between points using quiver
-        plt.quiver(X, Y, U, V, angles='xy', scale_units='xy', scale=1, color=colors[m], alpha=0.7, width=0.003, headwidth=5, headlength=5)
-        
-        # Highlight start and end points
-        plt.scatter(med_in.iloc[0], med_sh.iloc[0], color='grey', marker='*', s=200, zorder=5)
-        plt.scatter(med_in.iloc[-1], med_sh.iloc[-1], color=colors[m], marker='X', s=150, zorder=5)
+        # Draw arrows for the median (skip LHS as it's just random DoE)
+        if m != "LHS":
+            plt.quiver(X, Y, U, V, angles='xy', scale_units='xy', scale=1, color=colors[m], alpha=0.9, width=0.003, headwidth=5, headlength=5, edgecolors='black', linewidth=0.5, zorder=4)
 
     plt.xlabel('Physical Diversity (Normalized Input Entropy)')
     plt.ylabel('Explanatory Diversity (Normalized SHAP Entropy)')
