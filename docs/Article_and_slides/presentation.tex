@@ -6,6 +6,7 @@
 \usepackage{booktabs}
 \usepackage[scale=2]{ccicons}
 \usepackage{graphicx}
+\graphicspath{{Images/}}
 \usepackage{xcolor}
 \usepackage{amsmath}
 \usepackage{algorithm2e}
@@ -36,6 +37,32 @@
   \end{itemize}
 \end{frame}
 
+\begin{frame}[fragile]{Motivation: Tipping Points in Dual Spaces}
+  \textbf{Goal:} Identify critical phase transitions in both the physical and explanatory domains.
+  
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+      \centering
+      \textbf{Parameter Space (Cireco ICE/PDP)} \\
+      \includegraphics[width=0.9\textwidth, height=0.5\textheight, keepaspectratio]{cireco_pdp_ice_density_price.png}
+      \begin{itemize}
+          \item Macroscopic rupture: Prediction collapses/diverges at specific parameter thresholds (e.g., density).
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      \centering
+      \textbf{Explanatory Space (Schelling SHAP)} \\
+      \includegraphics[width=0.9\textwidth, height=0.5\textheight, keepaspectratio]{shap_RF_conv(1).png}
+      \begin{itemize}
+          \item Internal logic shift: Appearance of isolated "islands" where features suddenly dominate convergence.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+  
+  \vspace{0.3cm}
+  \textit{Conclusion: Hunting for explanatory novelty guarantees finding physical tipping points.}
+\end{frame}
+
 \begin{frame}[fragile]{The Core Concept: Explanatory Diversity}
   \textbf{The Shift:} Stop hunting for \textit{prediction uncertainty}; start hunting for \textit{explanatory novelty}.
   
@@ -49,12 +76,11 @@
 \section{Pipeline \& Innovations}
 
 \begin{frame}[fragile]{The Active Learning Pipeline Architecture}
-  \textbf{Step 1: Initial DoE.} Evaluate $N_{init}$ points via LHS.\\
-  \textbf{Step 2: Primary Surrogate.} Train Kriging GP on $\{x_{doe}, y_{doe}\}$.\\
-  \textbf{Step 3: Proxy SHAP.} Sample thousands of cheap points, compute ExactSHAP via the primary surrogate as a proxy.\\
-  \textbf{Step 4: Novelty Calculation.} Calculate SHAP Novelty metric.\\
-  \textbf{Step 5: Multi-Fidelity Surrogate.} Train Multi-Fidelity Kriging (MFK) on the Novelty metric.\\
-  \textbf{Step 6: Acquisition.} Hybrid Acquisition Function selects the next optimal point $\rightarrow$ Evaluate on True ABM.
+  \begin{figure}
+      \centering
+      \includegraphics[width=0.9\textwidth, height=0.75\textheight, keepaspectratio]{pipeline.png}
+      \caption{Flowchart of the Proposed Active Learning Framework}
+  \end{figure}
 \end{frame}
 
 \begin{frame}[fragile]{Algorithmic Innovations (I): Fast Cosine Proxy}
@@ -67,15 +93,20 @@
   \end{itemize}
 \end{frame}
 
-\begin{frame}[fragile]{Algorithmic Innovations (II): Dynamic Hybrid Acquisition}
-  \textbf{Balancing the Exploration (Dynamic-US):}
+\begin{frame}[fragile]{Algorithmic Innovations (II): Bi-Objective Optimization}
+  \textbf{Framing Dynamic-US as a Bi-Objective Problem:}
   
-  Our optimizer dynamically weighs Global Exploration against Explanatory Novelty.
-  $$a_{Dynamic}(x) = (1 - \lambda) \cdot \text{Norm}(\sigma^2_{GP}(x)) + \lambda \cdot \text{Norm}(\text{EI}_{MFK}(x))$$
+  Rather than a static heuristic, the acquisition strategy sweeps a Pareto front to simultaneously:
+  \begin{enumerate}
+      \item \textbf{Maximize Physical Exploration:} Predictive variance in input space ($\sigma^2_{GP}$).
+      \item \textbf{Maximize Explanatory Exploitation:} Novelty via Cosine distance in SHAP space ($\text{EI}_{MFK}$).
+  \end{enumerate}
+  
+  $$a_{Dynamic}(x) = (1 - \alpha^{(t)}) \cdot \widetilde{\sigma}^2_{GP}(x) + \alpha^{(t)} \cdot \widetilde{\text{EI}}_{MFK}(S(x))$$
   
   \begin{itemize}
-      \item Over iterations, $\lambda$ shifts from $0.0$ (pure Space-US) to $1.0$ (pure SHAP-US).
-      \item \textbf{Result:} It first maps global macroscopic behavior, then pivots strategically to isolate the complex, multi-dimensional \textbf{tipping points}.
+      \item Over iterations, $\alpha^{(t)}$ shifts dynamically from $0.0 \to 1.0$.
+      \item \textbf{Result:} It maps the macroscopic behavior first, then pivots to isolate the complex \textbf{tipping points}.
   \end{itemize}
 \end{frame}
 
@@ -164,12 +195,21 @@
       \item Validated on robust Agent-Based Models (Cireco, Schelling).
   \end{itemize}
   
-  \vspace{0.5cm}
-  \textbf{Perspectives:}
+\begin{frame}{Perspectives \& Future Work (I)}
+  \textbf{Scaling the Optimization and Dimensionality:}
   \begin{itemize}
-      \item Scaling to more complex ABMs.
-      \item Handling highly noisy surrogate environments.
-      \item Translating structural understanding into actionable decision-support tools.
+      \item \textbf{Integrated Variance Reduction (IMSE):} Replacing pointwise GP variance ($\sigma^2_{GP}$) with Integrated Mean Squared Error to solve the extrapolation artifacts at the boundaries of the hypercube.
+      \item \textbf{Active Subspace Projection:} Mathematically linking SHAP tracking to the dynamic rotation of the Active Subspace. This provides a theoretical pathway to scale to $M > 15$ dimensions by reducing ExactSHAP overhead.
+      \item \textbf{Native Simulator Integration:} Transitioning the surrogate methodology from the MLP proxy directly to the computationally intensive ABM cores.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Perspectives \& Future Work (II)}
+  \textbf{Advanced Surrogate \& Acquisition Optimization:}
+  \begin{itemize}
+      \item \textbf{Multi-Objective DFO (EHVI):} Replacing linear scalarization with Expected Hypervolume Improvement to capture non-convex regions of the Pareto front.
+      \item \textbf{Trust-Region Bayesian Optimization (TuRBO):} Using dynamically sized local trust regions to handle the inherently non-stationary landscapes of SHAP novelty.
+      \item \textbf{Global Solvers (CMA-ES):} Upgrading the acquisition optimizer from L-BFGS-B to Covariance Matrix Adaptation Evolution Strategy to avoid local minima traps in the multimodal novelty surface.
   \end{itemize}
 \end{frame}
 

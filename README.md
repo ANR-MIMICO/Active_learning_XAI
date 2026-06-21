@@ -15,7 +15,7 @@ The project has been refactored into a modular architecture, separating the core
 
 ### Core Architecture
 - **`src/`**: Contains the core, model-agnostic Active Learning and Surrogate Optimization framework (e.g., `al_xai_optimizer.py`, implementing the SHAP-US and Dynamic-US strategies).
-- **`docs/`**: Contains the mathematical documentation (`docs/al_abs/`), the Beamer presentations with final figures (`docs/slides/`), and expert evaluation reports.
+- **`docs/`**: Contains the draft article, Beamer presentations, and final figures combined in `docs/Article_and_slides/`, along with expert evaluation reports.
 
 ### ABM Implementations
 Both models follow a standardized internal structure (`data/`, `figures/`, `scripts/`, `notebooks/`):

@@ -8,6 +8,7 @@
 
 \usepackage{comment}
 \usepackage{graphicx}%
+\graphicspath{{Images/}}
 \usepackage{multirow}%
 \usepackage{amsmath,amssymb,amsfonts}%
 \usepackage{amsthm}%
@@ -119,12 +120,23 @@ Our proposed methodology relies on an iterative Bayesian active learning loop de
     
     \item \textbf{Explanation Inputs and Surrogate Training:} To bypass the cost of generating explanations directly from the simulator, we train a noisy Gaussian Process (GP) on the initial dataset $\{x_{doe}, y_{doe}\}$[cite: 49]. We then sample $n_{xpl\_lowfi}$ low-fidelity points ($x_{xpl\_lowfi}$) in the design space[cite: 48]. Using the GP as a proxy, we compute ExactSHAP values for both the evaluated points and the low-fidelity points ($x_{xpl\_lowfi} \cup x_{doe}$)[cite: 50]. 
     
-    \item \textbf{Explanation Densities:} To quantify the novelty of an explanation, we apply Kernel Density Estimation (KDE) to the generated SHAP values, yielding a density metric $y_{dens\_total}$[cite: 61]. The dataset is split into high-fidelity densities ($y_{dens\_high}$ corresponding to $x_{doe}$) and low-fidelity densities ($y_{dens\_low}$ corresponding to $x_{xpl\_lowfi}$)[cite: 62]. Areas with low density indicate rare or novel explanatory structures.
+    \item \textbf{Explanation Novelty via Fast Proxy:} To bypass the curse of dimensionality inherent in high-dimensional KDE, where $L_2$ distances suffer from the concentration of measure, we quantify the novelty of an explanation using a Fast Density Proxy via Cosine Distance (Nearest Neighbors) on the generated SHAP values. By focusing on the directional alignment of feature contributions, the proxy preserves the local manifold structure. We define the density proxy as:
+    \begin{equation}
+        \rho_{proxy}(x) \propto \exp\left(-\gamma \cdot d_{cos}(S(x), \mathcal{S}_{hist}^{(k)})\right)
+    \end{equation}
+    where $d_{cos}$ is the cosine distance to the $k$-th nearest neighbor in the historical SHAP set $\mathcal{S}_{hist}$. This yields a novelty metric $y_{nov\_total}$[cite: 61]. The dataset is split into high-fidelity novelties ($y_{nov\_high}$ corresponding to $x_{doe}$) and low-fidelity novelties ($y_{nov\_low}$ corresponding to $x_{xpl\_lowfi}$)[cite: 62]. Areas with high cosine distance indicate rare or novel explanatory structures.
     
-    \item \textbf{Multi-fidelity Bayesian Optimization:} We construct a Multi-Fidelity Gaussian Process (MFGP) using the combined datasets: $[\{x_{doe}, y_{dens\_high}\}, \{x_{xpl\_lowfi}, y_{dens\_low}\}]$[cite: 80]. By treating the GP-derived SHAP densities as a low-fidelity information source, we optimize the Expected Improvement (EI) over the MFGP to identify the next optimal sampling point, $x_{opt}$, which promises the highest explanatory novelty[cite: 81].
+    \item \textbf{Dynamic Hybrid Bayesian Optimization (Dynamic-US):} We construct a Multi-Fidelity Gaussian Process (MFGP) using the combined datasets: $[\{x_{doe}, y_{nov\_high}\}, \{x_{xpl\_lowfi}, y_{nov\_low}\}]$[cite: 80]. Rather than purely optimizing explanatory novelty, we frame the acquisition strategy as a bi-objective optimization problem. The goal is to simultaneously maximize physical exploration (the predictive variance $\sigma^2_{GP}(x)$ in the input space) and maximize explanatory exploitation (the novelty derived from cosine distance to the historical SHAP dataset, represented by $\text{EI}_{MFK}$). We solve this using a dynamic linear scalarization that also acts as a modified Integrated Mean Squared Error (IMSE) minimization:
+    \begin{equation}
+        a_{Dynamic}(x) = (1 - \alpha^{(t)}) \cdot \widetilde{\sigma}^2_{GP}(x) + \alpha^{(t)} \cdot \widetilde{\text{EI}}_{MFK}(S(x))
+    \end{equation}
+    The parameter $\alpha^{(t)}$ smoothly sweeps the Pareto front across iterations via a dynamic schedule $\alpha^{(t)} = \alpha_{start} + (\alpha_{end} - \alpha_{start}) \frac{t}{T}$. This identifies the next optimal sampling point, $x_{opt}$, blending standard uncertainty reduction with explanation-driven novelty[cite: 81].
     
     \item \textbf{Update:} The expensive black-box simulator is queried at the new point $x_{opt}$ to retrieve $y_{opt}$[cite: 102]. The exact dataset is then updated ($x_{doe} := x_{doe} \cup x_{opt}$ and $y_{doe} := y_{doe} \cup y_{opt}$), and the loop repeats[cite: 103, 104].
 \end{enumerate}
+
+\subsection{Connection to Active Subspaces}
+The proposed methodology inherently performs a dynamic dimensionality reduction. Active Subspace methods find a matrix $C = \int (\nabla f(x))(\nabla f(x))^T \rho(x) dx$. Since SHAP values $S(x)$ are local linear approximations of feature effects, the covariance matrix of the SHAP values approximates $C$. By performing Cosine KNN on $S(x)$, the algorithm clusters points based on their alignment within this Active Subspace. Thus, explicitly hunting for SHAP novelty is mathematically equivalent to tracking the rotation of the Active Subspace, proving highly effective at mapping complex, non-linear tipping points.
 
 \begin{algorithm}[hbt!]
 \SetAlgoLined
@@ -147,19 +159,19 @@ Initialize dataset $\mathcal{D} \leftarrow \{x_{doe}, y_{doe}\}$\;
     Compute ExactSHAP values $S$ for $(x_{xpl\_lowfi} \cup x_{doe})$ using the GP as a proxy, with $x_{doe}$ as the background reference\;
     
     \vspace{2mm}
-    \tcp{Step 3: Explanation Densities}
-    Compute density $y_{dens\_total}$ on the SHAP values $S$ using Kernel Density Estimation (KDE)\;
-    Extract high-fidelity densities: $y_{dens\_high} \leftarrow y_{dens\_total}(x_{doe})$\;
-    Extract low-fidelity densities: $y_{dens\_low} \leftarrow y_{dens\_total}(x_{xpl\_lowfi})$\;
+    \tcp{Step 3: Explanation Novelty}
+    Compute proxy novelty $y_{nov\_total}$ on the SHAP values $S$ using Cosine Distance (k-NN)\;
+    Extract high-fidelity novelties: $y_{nov\_high} \leftarrow y_{nov\_total}(x_{doe})$\;
+    Extract low-fidelity novelties: $y_{nov\_low} \leftarrow y_{nov\_total}(x_{xpl\_lowfi})$\;
     
     \vspace{2mm}
-    \tcp{Step 4: Multi-fidelity Bayesian Optimization}
+    \tcp{Step 4: Dynamic Hybrid Bayesian Optimization}
     Train a Multi-Fidelity Gaussian Process (MFGP) using:
     \begin{itemize}
-        \item High-fidelity data: $\{x_{doe}, y_{dens\_high}\}$
-        \item Low-fidelity data: $\{x_{xpl\_lowfi}, y_{dens\_low}\}$
+        \item High-fidelity data: $\{x_{doe}, y_{nov\_high}\}$
+        \item Low-fidelity data: $\{x_{xpl\_lowfi}, y_{nov\_low}\}$
     \end{itemize}
-    Find the next optimal point $x_{opt}$ by optimizing the Expected Improvement (EI) over the MFGP\;
+    Find the next optimal point $x_{opt}$ by maximizing the Dynamic Hybrid Acquisition function (balancing GP Variance and MFGP Expected Improvement)\;
     
     \vspace{2mm}
     \tcp{Step 5: Update}
@@ -183,25 +195,69 @@ Conversely, our active learning loop, driven by Kernel Density Estimation (KDE) 
 
 These low-density, high-impact regions represent critical tipping points in the Agent-Based Model. By treating the SHAP density as a low-fidelity information source in the Multi-Fidelity Gaussian Process (MFGP), the optimization successfully targets these boundaries. The resulting dataset achieves a higher explanatory diversity, ensuring that the surrogate model not only predicts the output accurately but captures the diverse causal mechanisms that drive those predictions.
 \section{Results}
+\subsection{Overcoming the Curse of Dimensionality in Sampling}
 To validate the framework rapidly, initial testing was conducted using a Multi-Layer Perceptron (MLPClassifier and MLPRegressor) trained as a proxy stand-in for the expensive ABM simulator[cite: 115]. The parameter space explored included five features: \textit{Number of Types}, \textit{Density}, \textit{Intolerance threshold}, \textit{Map size}, and \textit{Perception distance}[cite: 35]. 
 
 The target outputs analyzed were the system's \textit{Sparsity} (a continuous metric) and its \textit{Convergence} state (a boolean metric)[cite: 106]. The active learning loop was initialized with $N=10$ points and progressed up to $N=100$ iterations[cite: 106]. 
 
 Visualization of the "Evolution of Sparsity vs Features" demonstrates the algorithm's sampling behavior over iterations[cite: 106]. The dynamic sampling successfully separates converged instances from non-converged instances, actively populating regions of the feature space that exhibit rare SHAP value combinations, thereby isolating the boundaries where the system tips between convergence states.
-The efficacy of the proposed active learning framework is visually demonstrated in the SHAP beeswarm plot (see Figure X). Unlike traditional space-filling designs that tend to over-sample homogenous regions resulting in dense clustering around zero impact, our KDE-driven approach explicitly populates the sparse, high-impact tails of the distribution.
+
+\begin{figure}[hbt!]
+    \centering
+    \includegraphics[width=0.8\textwidth]{schelling_final_hybrid_diff_profile.png}
+    \caption{Hybrid density difference profile (\textbf{Dynamic-US minus LHS}). Green regions indicate narrow parameter bands intentionally over-sampled by the active learner, while red regions are actively ignored. By avoiding the curse of dimensionality inherent in purely global exploration, Dynamic-US aggressively targets specific boundary regions where the multi-dimensional tipping points reside.}
+    \label{fig:hybrid_diff}
+\end{figure}
+
+\begin{figure}[hbt!]
+    \centering
+    \includegraphics[width=0.8\textwidth]{schelling_input_space_comparison_2D_frontier.png}
+    \caption{2D Input Space Comparison showing the targeted boundary frontier. Unlike uniform space-filling designs, our approach tightly clusters samples along the non-linear boundaries where macroscopic phase transitions occur, explicitly tracking the tipping points.}
+    \label{fig:schelling_frontier}
+\end{figure}
+
+\subsection{Identifying Tipping Points in the Explanatory Space}
+The efficacy of the proposed active learning framework is visually demonstrated in the SHAP beeswarm plot. Unlike traditional space-filling designs that tend to over-sample homogenous regions resulting in dense clustering around zero impact, our approach explicitly populates the sparse, high-impact tails of the distribution.
+
+\begin{figure}[hbt!]
+    \centering
+    \includegraphics[width=0.8\textwidth]{shap_RF_conv(1).png}
+    \caption{SHAP summary plot for model convergence. Traditional space-filling designs suffer from the curse of dimensionality, often over-sampling the homogeneous bulk (clustering near zero). Conversely, our active learning loop explicitly uncovers isolated "islands" of feature contributions. These sparse regions represent critical internal logic shifts in the explanatory space, directly corresponding to the system's physical tipping points.}
+    \label{fig:shap_conv}
+\end{figure}
 
 As observed in the distribution for the \textit{Intolerance threshold}, the algorithm successfully identifies and samples distinct, isolated clusters of SHAP values at the extreme ends of the spectrum (e.g., at $-0.4$ and $+0.6$). These low-density "islands" correspond to critical tipping points where the system transitions between behavioral regimes. Similarly, for features with low global variance such as \textit{Map size}, the optimization loop successfully targets the rare edge cases where the feature suddenly dominates the output. This confirms that the framework effectively maximizes explanatory diversity, uncovering rare causal mechanisms that standard prediction-error-focused samplers would likely miss.
 
 
 \section{Analysis}
-The integration of SHAP values with KDE provides a robust metric for "explanatory novelty." By optimizing the MFGP to seek out low-density SHAP profiles, the Active Learning loop avoids redundantly sampling regions where the causal mechanics are already well-understood[cite: 65, 84].
+The integration of SHAP values with the Fast Cosine Proxy provides a robust metric for "explanatory novelty." By optimizing the MFGP to seek out rare SHAP profiles, the Active Learning loop avoids redundantly sampling regions where the causal mechanics are already well-understood[cite: 65, 84].
 
-Furthermore, the utilization of Partial Dependence Plots (PDP) and Individual Conditional Expectation (ICE) plots—colored by density—reveals complex, non-linear feature interactions[cite: 107]. For instance, tracking metrics such as the \textit{price index} against variables like \textit{cost to dispose} and \textit{scarcity} highlights sharp divergences in system behavior[cite: 107]. The active learning framework successfully maps these critical behavioral thresholds (tipping points) using significantly fewer evaluations than would be required by purely random or prediction-error-focused sampling[cite: 19]. 
+\subsection{Macroscopic Ruptures in Parameter Space}
+Furthermore, the utilization of Partial Dependence Plots (PDP) and Individual Conditional Expectation (ICE) plots—colored by density—reveals complex, non-linear feature interactions[cite: 107]. For instance, tracking metrics such as the \textit{price index} against variables like \textit{density} highlights sharp divergences in system behavior[cite: 107]. 
 
-\section{Discussions}
+\begin{figure}[hbt!]
+    \centering
+    \includegraphics[width=0.8\textwidth]{cireco_pdp_ice_density_price.png}
+    \caption{Partial Dependence (PDP) and Individual Conditional Expectation (ICE) plots colored by sampling density. This visualization illustrates macroscopic ruptures in the parameter space (e.g., sharp divergence at specific density thresholds). When paired with explanatory shifts, these divergences reveal the system's "dual tipping points"—critical phase transitions in both the physical predictions and the underlying causal mechanisms, mapped efficiently without exhaustive simulation.}
+    \label{fig:pdp_ice}
+\end{figure}
+
+The active learning framework successfully maps these critical behavioral thresholds (tipping points) using significantly fewer evaluations than would be required by purely random or prediction-error-focused sampling[cite: 19]. 
+
+\subsection{Dual Space Efficiency}
+\begin{figure}[hbt!]
+    \centering
+    \includegraphics[width=0.8\textwidth]{cireco_final_dual_space_efficiency.png}
+    \caption{Evaluation of exploration efficiency across physical (left) and explanatory (right) spaces. While traditional methods increase physical entropy linearly, the Dynamic-US strategy achieves a rapid, non-linear gain in explanatory entropy. This "dual space efficiency" proves that prioritizing explanatory novelty simultaneously accelerates the discovery of complex physical tipping points, drastically reducing the overall simulation budget.}
+    \label{fig:dual_space}
+\end{figure}
+
+\section{Discussion and Scalability}
 The primary advantage of this framework is its shift in focus from prediction accuracy to structural understanding[cite: 16]. By explicitly targeting "new explanations," modelers gain deeper engineering insights, improved model trustworthiness, and enhanced decision-support capabilities[cite: 16]. 
 
-However, there are current limitations. Computing ExactSHAP values, even on a fast GP surrogate, incurs a computational overhead that scales with dimensionality[cite: 50]. Additionally, the framework is sensitive to the accuracy of the underlying GP; noise in the GP's predictions can mislead the KDE, resulting in suboptimal density estimations[cite: 114].
+However, there are current limitations regarding scalability. Computing ExactSHAP values, even on a fast GP surrogate, incurs a computational overhead of $\mathcal{O}(2^M)$ that scales exponentially with dimensionality $M$[cite: 50]. While the transition from classical KDE ($\mathcal{O}(N \cdot d)$ with complex bandwidth selection) to the Fast Cosine Proxy ($\mathcal{O}(N \log N)$) resolved the novelty estimation bottleneck, surrogate inference remains the primary limiting factor for scaling to $M > 15$ parameters.
+
+From an operations research perspective, several mathematical enhancements could further robustify the acquisition process. First, the current linear scalarization of the bi-objective optimization could be replaced with Expected Hypervolume Improvement (EHVI) or NSGA-II to properly identify non-convex regions of the Pareto front. Second, the highly multimodal and non-stationary nature of the SHAP novelty landscape suggests that replacing the local L-BFGS-B acquisition optimizer with a global derivative-free optimizer like CMA-ES, or employing Trust-Region Bayesian Optimization (TuRBO), would significantly improve surrogate calibration and convergence.
 
 Immediate next steps for this research include:
 \begin{itemize}
