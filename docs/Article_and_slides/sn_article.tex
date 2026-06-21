@@ -148,6 +148,9 @@ The proposed methodology inherently performs a dynamic dimensionality reduction.
 Sample $n_{doe}$ points $x_{doe}$ in $\mathcal{X}$ using Latin Hypercube Sampling (LHS)\;
 Evaluate black-box simulator: $y_{doe} \leftarrow f(x_{doe})$\;
 Initialize dataset $\mathcal{D} \leftarrow \{x_{doe}, y_{doe}\}$\;
+Initialize dynamic scalarization weight: $\alpha^{(0)} \leftarrow \alpha_{start}$\;
+Define step size $\Delta \alpha = \frac{\alpha_{end} - \alpha_{start}}{N - n_{doe} - 1}$\;
+Initialize iteration counter $t \leftarrow 0$\;
 
 \vspace{2mm}
 \tcp{Active Learning Loop}
@@ -163,15 +166,19 @@ Initialize dataset $\mathcal{D} \leftarrow \{x_{doe}, y_{doe}\}$\;
     Compute proxy novelty $y_{nov\_total}$ on the SHAP values $S$ using Cosine Distance (k-NN)\;
     Extract high-fidelity novelties: $y_{nov\_high} \leftarrow y_{nov\_total}(x_{doe})$\;
     Extract low-fidelity novelties: $y_{nov\_low} \leftarrow y_{nov\_total}(x_{xpl\_lowfi})$\;
-    
-    \vspace{2mm}
-    \tcp{Step 4: Dynamic Hybrid Bayesian Optimization}
-    Train a Multi-Fidelity Gaussian Process (MFGP) using:
+
+
+Train a Multi-Fidelity Gaussian Process (MFGP) to predict explanation density using:
     \begin{itemize}
         \item High-fidelity data: $\{x_{doe}, y_{nov\_high}\}$
         \item Low-fidelity data: $\{x_{xpl\_lowfi}, y_{nov\_low}\}$
     \end{itemize}
-    Find the next optimal point $x_{opt}$ by maximizing the Dynamic Hybrid Acquisition function (balancing GP Variance and MFGP Expected Improvement)\;
+
+        \vspace{2mm}
+    \tcp{Step 4: Dynamic Hybrid Bayesian Optimization}
+
+    Find the next optimal point $x_{opt}$ by maximizing the Dynamic Hybrid Acquisition function (balancing GP Variance and MFGP Expected Improvement) via Differential Evolution:
+    $x_{opt} = \arg\max_{x \in \mathcal{X}} \left[ (1 - \alpha^{(t)}) \cdot \widetilde{\sigma}^2_{GP}(x) + \alpha^{(t)} \cdot \widetilde{\text{EI}}_{MFK}(S(x)) \right]$\;
     
     \vspace{2mm}
     \tcp{Step 5: Update}
@@ -179,6 +186,8 @@ Initialize dataset $\mathcal{D} \leftarrow \{x_{doe}, y_{doe}\}$\;
     Update inputs: $x_{doe} \leftarrow x_{doe} \cup \{x_{opt}\}$\;
     Update outputs: $y_{doe} \leftarrow y_{doe} \cup \{y_{opt}\}$\;
     Update dataset: $\mathcal{D} \leftarrow \{x_{doe}, y_{doe}\}$\;
+    Update scalarization weight: $\alpha^{(t+1)} \leftarrow \alpha^{(t)} + \Delta \alpha$\;
+    $t \leftarrow t + 1$\;
 }
 \caption{Black-box Active Learning for Discovering New Explanations}
 \label{algo:active_learning}
