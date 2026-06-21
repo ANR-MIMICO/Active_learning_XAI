@@ -1,0 +1,238 @@
+\documentclass[sn-mathphys]{sn-jnl}
+
+\AtBeginDocument{%
+  \renewcommand\normalsize{\fontsize{8}{9}\selectfont}
+  \renewcommand\small{\fontsize{8}{9}\selectfont}
+  \renewcommand\footnotesize{\fontsize{6}{8}\selectfont}
+}
+
+\usepackage{comment}
+\usepackage{graphicx}%
+\usepackage{multirow}%
+\usepackage{amsmath,amssymb,amsfonts}%
+\usepackage{amsthm}%
+\usepackage{mathrsfs}%
+\usepackage[title]{appendix}%
+%\usepackage{xcolor}%
+\usepackage[table]{xcolor}
+\usepackage{csquotes}
+\usepackage[margin=1in]{geometry}
+\usepackage{accents}
+\usepackage{textcomp}%
+\usepackage{manyfoot}%
+\usepackage{booktabs}%
+%\usepackage{algorithm}%
+%\usepackage{algorithmicx}%
+\usepackage{algpseudocode}%
+\usepackage{listings}%
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{orcidlink}
+\usepackage{hyperref}
+\MakeOuterQuote{"}
+\usepackage{etoolbox}
+\usepackage{enumitem}
+\usepackage{makecell}
+\usepackage{url}
+\usepackage[ruled,vlined,linesnumbered]{algorithm2e}
+
+% Global settings for all enumerate environments:
+\setlist[enumerate]{
+  topsep=0pt,    % space above and below the list
+  partopsep=0pt, % extra space when starting a new paragraph
+  parsep=0.1em,    % space between paragraphs within an item
+  itemsep=0.25em,
+  font=\normalfont\normalsize}
+
+% Global settings for all enumerate environments:
+\setlist[itemize]{
+  topsep=0pt,    % space above and below the list
+  partopsep=0pt, % extra space when starting a new paragraph
+  parsep=0.1em,    % space between paragraphs within an item
+  itemsep=0.25em,
+  font=\normalfont\normalsize}
+  
+%% as per the requirement new theorem styles can be included as shown below
+\theoremstyle{thmstyleone}%
+\newtheorem{theorem}{Theorem}%  meant for continuous numbers
+%%\newtheorem{theorem}{Theorem}[section]% meant for sectionwise numbers
+%% optional argument [theorem] produces theorem numbering sequence instead of independent numbers for Proposition
+\newtheorem{proposition}[theorem]{Proposition}% 
+%%\newtheorem{proposition}{Proposition}% to get separate numbers for theorem and proposition etc.
+\setlength{\abovecaptionskip}{4pt}  % espace au-dessus de la légende
+\setlength{\belowcaptionskip}{0pt}  % espace sous la légende
+\theoremstyle{thmstyletwo}%
+\newtheorem{example}{Example}%
+\newtheorem{remark}{Remark}%
+
+\theoremstyle{thmstylethree}%
+\newtheorem{definition}{Definition}%
+
+\raggedbottom
+%%\unnumbered% uncomment this for unnumbered level heads
+
+\let\oldthebibliography\thebibliography
+\let\endoldthebibliography\endthebibliography
+\renewenvironment{thebibliography}[1]{
+  \begin{oldthebibliography}{#1}
+    \setlength{\itemsep}{0em}
+    \setlength{\parskip}{0em}
+}
+{
+  \end{oldthebibliography}
+}
+
+\begin{document}
+
+\title{Black-box Active Learning for Discovering New Explanations in Complex System Exploration}%
+
+\author*[1]{\fnm{Paul} \sur{Saves}\orcidlink{0000-0001-5889-2302} }\email{paul.saves@irit.fr}
+\author[1]{\fnm{Nicolas} \sur{Verstaevel}\orcidlink{0000-0002-7879-6681}  }\email{nicolas.verstaevel@irit.fr}
+\author[1]{\fnm{Benoit} \sur{Gaudou}\orcidlink{0000-0002-9005-3004 }}\email{benoit.gaudou@ut-capitole.fr}
+\affil*[1]{\orgdiv{Université Toulouse Capitole, IRIT},  \city{Toulouse}, \postcode{31000},\state{Occitanie},\country{ France}}
+
+\abstract{
+Exploring the parameter space of socio-technical complex systems, such as Agent-Based Models, presents significant challenges due to high dimensionality and computational cost. As these simulators typically function as non-differentiable black-box models, effective exploration requires derivative-free strategies. However, traditional sampling methods, such as Stepwise Uncertainty Reduction or Static Design of Experiments, typically prioritize minimizing global prediction error or output variance. These approaches often fail to capture the diverse causal mechanisms underlying system behavior, missing critical instances where different input combinations yield similar outputs for fundamentally different reasons.
+
+In this work, we propose a novel Active Learning framework designed to discover "new explanations" rather than simply accumulating data points. Our model-agnostic method integrates Surrogate Modeling with post-hoc explainable artificial intelligence to guide the exploration process. The methodology proceeds in an iterative Bayesian loop, maximizing the explanatory diversity within the collected data. By explicitly targeting points that are distinct in their explanatory structure (feature contribution profiles), our framework efficiently uncovers rare behavioral regimes and distinct internal logic.
+Consequently, this framework achieves a deep structural understanding with fewer simulations than standard prediction-based strategies. It proves particularly effective in characterizing critical system behaviors, including tipping points. 
+
+\textbf{Keywords:} Surrogate models $\cdot$  Explainable Artificial Intelligence $\cdot$ Machine learning  $\cdot$ Active Learning  $\cdot$ Agent-based modeling 
+}
+
+\maketitle
+
+\tableofcontents
+
+\section{Introduction}
+Simulations of complex socio-technical systems, such as Agent-Based Models (ABMs), are vital for understanding emergent phenomena[cite: 15]. However, the exploration of their parameter spaces is often bottlenecked by high computational costs and the high dimensionality of the models[cite: 1]. These simulators generally act as non-differentiable black boxes, rendering traditional gradient-based optimization ineffective. 
+
+To reduce the computational burden of sampling-intensive tasks, researchers traditionally employ surrogate models (e.g., Kriging/Gaussian Processes) coupled with sampling strategies like static Design of Experiments (DoE) or adaptive sampling via Bayesian Optimization[cite: 2, 31]. While these methods excel at minimizing global prediction error or finding global optima, they fall short in uncovering the diverse causal mechanisms that drive system behavior. They frequently miss complex behavioral regimes where different parameter combinations yield similar macroscopic outputs for entirely different internal reasons.
+
+To address this, we introduce a model-agnostic Active Learning framework that couples Surrogate Modeling with Explainable Artificial Intelligence (XAI)[cite: 19]. Rather than targeting prediction uncertainty, our approach actively hunts for "new explanations." By utilizing tools such as SHAP (SHapley Additive exPlanations) to interpret feature contributions[cite: 16], our methodology iteratively samples points that exhibit rare or unseen explanatory profiles, efficiently mapping the boundaries of complex system behaviors and tipping points.
+
+\section{Methods}
+Our proposed methodology relies on an iterative Bayesian active learning loop designed to maximize explanatory diversity[cite: 19]. The workflow consists of five primary steps:
+
+\begin{enumerate}
+    \item \textbf{Initial Dataset Generation:} We begin by sampling an initial set of $n_{doe}$ points within the feature design space using Latin Hypercube Sampling (LHS)[cite: 40]. These points, denoted as $x_{doe}$, are then evaluated using the expensive black-box simulator to obtain the true outputs, $y_{doe}$[cite: 41].
+    
+    \item \textbf{Explanation Inputs and Surrogate Training:} To bypass the cost of generating explanations directly from the simulator, we train a noisy Gaussian Process (GP) on the initial dataset $\{x_{doe}, y_{doe}\}$[cite: 49]. We then sample $n_{xpl\_lowfi}$ low-fidelity points ($x_{xpl\_lowfi}$) in the design space[cite: 48]. Using the GP as a proxy, we compute ExactSHAP values for both the evaluated points and the low-fidelity points ($x_{xpl\_lowfi} \cup x_{doe}$)[cite: 50]. 
+    
+    \item \textbf{Explanation Densities:} To quantify the novelty of an explanation, we apply Kernel Density Estimation (KDE) to the generated SHAP values, yielding a density metric $y_{dens\_total}$[cite: 61]. The dataset is split into high-fidelity densities ($y_{dens\_high}$ corresponding to $x_{doe}$) and low-fidelity densities ($y_{dens\_low}$ corresponding to $x_{xpl\_lowfi}$)[cite: 62]. Areas with low density indicate rare or novel explanatory structures.
+    
+    \item \textbf{Multi-fidelity Bayesian Optimization:} We construct a Multi-Fidelity Gaussian Process (MFGP) using the combined datasets: $[\{x_{doe}, y_{dens\_high}\}, \{x_{xpl\_lowfi}, y_{dens\_low}\}]$[cite: 80]. By treating the GP-derived SHAP densities as a low-fidelity information source, we optimize the Expected Improvement (EI) over the MFGP to identify the next optimal sampling point, $x_{opt}$, which promises the highest explanatory novelty[cite: 81].
+    
+    \item \textbf{Update:} The expensive black-box simulator is queried at the new point $x_{opt}$ to retrieve $y_{opt}$[cite: 102]. The exact dataset is then updated ($x_{doe} := x_{doe} \cup x_{opt}$ and $y_{doe} := y_{doe} \cup y_{opt}$), and the loop repeats[cite: 103, 104].
+\end{enumerate}
+
+\begin{algorithm}[hbt!]
+\SetAlgoLined
+\KwIn{Expensive black-box simulator $f$, Feature design space $\mathcal{X}$, Initial budget $n_{doe}$, Total budget $N$, Low-fidelity explanation budget $n_{xpl\_lowfi}$}
+\KwOut{Explored dataset $\mathcal{D} = \{x_{doe}, y_{doe}\}$}
+
+\vspace{2mm}
+\tcp{Step 1: Initial Dataset Generation}
+Sample $n_{doe}$ points $x_{doe}$ in $\mathcal{X}$ using Latin Hypercube Sampling (LHS)\;
+Evaluate black-box simulator: $y_{doe} \leftarrow f(x_{doe})$\;
+Initialize dataset $\mathcal{D} \leftarrow \{x_{doe}, y_{doe}\}$\;
+
+\vspace{2mm}
+\tcp{Active Learning Loop}
+\While{$|\mathcal{D}| < N$}{
+    \vspace{1mm}
+    \tcp{Step 2: Explanation Inputs and Surrogate Training}
+    Train a noisy Gaussian Process (GP) on the current dataset $\mathcal{D}$\;
+    Sample $n_{xpl\_lowfi}$ points $x_{xpl\_lowfi}$ in $\mathcal{X}$\;
+    Compute ExactSHAP values $S$ for $(x_{xpl\_lowfi} \cup x_{doe})$ using the GP as a proxy, with $x_{doe}$ as the background reference\;
+    
+    \vspace{2mm}
+    \tcp{Step 3: Explanation Densities}
+    Compute density $y_{dens\_total}$ on the SHAP values $S$ using Kernel Density Estimation (KDE)\;
+    Extract high-fidelity densities: $y_{dens\_high} \leftarrow y_{dens\_total}(x_{doe})$\;
+    Extract low-fidelity densities: $y_{dens\_low} \leftarrow y_{dens\_total}(x_{xpl\_lowfi})$\;
+    
+    \vspace{2mm}
+    \tcp{Step 4: Multi-fidelity Bayesian Optimization}
+    Train a Multi-Fidelity Gaussian Process (MFGP) using:
+    \begin{itemize}
+        \item High-fidelity data: $\{x_{doe}, y_{dens\_high}\}$
+        \item Low-fidelity data: $\{x_{xpl\_lowfi}, y_{dens\_low}\}$
+    \end{itemize}
+    Find the next optimal point $x_{opt}$ by optimizing the Expected Improvement (EI) over the MFGP\;
+    
+    \vspace{2mm}
+    \tcp{Step 5: Update}
+    Evaluate the expensive black-box at the new point: $y_{opt} \leftarrow f(x_{opt})$\;
+    Update inputs: $x_{doe} \leftarrow x_{doe} \cup \{x_{opt}\}$\;
+    Update outputs: $y_{doe} \leftarrow y_{doe} \cup \{y_{opt}\}$\;
+    Update dataset: $\mathcal{D} \leftarrow \{x_{doe}, y_{doe}\}$\;
+}
+\caption{Black-box Active Learning for Discovering New Explanations}
+\label{algo:active_learning}
+\end{algorithm}
+
+
+
+
+\subsection{Identification of Rare Explanatory Regimes}
+
+To evaluate the framework's ability to uncover distinct internal logic, we analyze the distribution of feature contributions using SHAP summary plots (see Figure X). Traditional space-filling designs often over-sample the homogenous regions of the parameter space, resulting in a dense clustering of SHAP values near zero, where features exert minimal distinct influence on the macroscopic output.
+
+Conversely, our active learning loop, driven by Kernel Density Estimation (KDE) on SHAP values, explicitly populates the sparse "tails" and isolated clusters of the distribution. For example, the SHAP beeswarm plot reveals distinct behavioral regimes, such as isolated instances where low \textit{Map size} or low \textit{Density} dominate the model's convergence state. 
+
+These low-density, high-impact regions represent critical tipping points in the Agent-Based Model. By treating the SHAP density as a low-fidelity information source in the Multi-Fidelity Gaussian Process (MFGP), the optimization successfully targets these boundaries. The resulting dataset achieves a higher explanatory diversity, ensuring that the surrogate model not only predicts the output accurately but captures the diverse causal mechanisms that drive those predictions.
+\section{Results}
+To validate the framework rapidly, initial testing was conducted using a Multi-Layer Perceptron (MLPClassifier and MLPRegressor) trained as a proxy stand-in for the expensive ABM simulator[cite: 115]. The parameter space explored included five features: \textit{Number of Types}, \textit{Density}, \textit{Intolerance threshold}, \textit{Map size}, and \textit{Perception distance}[cite: 35]. 
+
+The target outputs analyzed were the system's \textit{Sparsity} (a continuous metric) and its \textit{Convergence} state (a boolean metric)[cite: 106]. The active learning loop was initialized with $N=10$ points and progressed up to $N=100$ iterations[cite: 106]. 
+
+Visualization of the "Evolution of Sparsity vs Features" demonstrates the algorithm's sampling behavior over iterations[cite: 106]. The dynamic sampling successfully separates converged instances from non-converged instances, actively populating regions of the feature space that exhibit rare SHAP value combinations, thereby isolating the boundaries where the system tips between convergence states.
+The efficacy of the proposed active learning framework is visually demonstrated in the SHAP beeswarm plot (see Figure X). Unlike traditional space-filling designs that tend to over-sample homogenous regions resulting in dense clustering around zero impact, our KDE-driven approach explicitly populates the sparse, high-impact tails of the distribution.
+
+As observed in the distribution for the \textit{Intolerance threshold}, the algorithm successfully identifies and samples distinct, isolated clusters of SHAP values at the extreme ends of the spectrum (e.g., at $-0.4$ and $+0.6$). These low-density "islands" correspond to critical tipping points where the system transitions between behavioral regimes. Similarly, for features with low global variance such as \textit{Map size}, the optimization loop successfully targets the rare edge cases where the feature suddenly dominates the output. This confirms that the framework effectively maximizes explanatory diversity, uncovering rare causal mechanisms that standard prediction-error-focused samplers would likely miss.
+
+
+\section{Analysis}
+The integration of SHAP values with KDE provides a robust metric for "explanatory novelty." By optimizing the MFGP to seek out low-density SHAP profiles, the Active Learning loop avoids redundantly sampling regions where the causal mechanics are already well-understood[cite: 65, 84].
+
+Furthermore, the utilization of Partial Dependence Plots (PDP) and Individual Conditional Expectation (ICE) plots—colored by density—reveals complex, non-linear feature interactions[cite: 107]. For instance, tracking metrics such as the \textit{price index} against variables like \textit{cost to dispose} and \textit{scarcity} highlights sharp divergences in system behavior[cite: 107]. The active learning framework successfully maps these critical behavioral thresholds (tipping points) using significantly fewer evaluations than would be required by purely random or prediction-error-focused sampling[cite: 19]. 
+
+\section{Discussions}
+The primary advantage of this framework is its shift in focus from prediction accuracy to structural understanding[cite: 16]. By explicitly targeting "new explanations," modelers gain deeper engineering insights, improved model trustworthiness, and enhanced decision-support capabilities[cite: 16]. 
+
+However, there are current limitations. Computing ExactSHAP values, even on a fast GP surrogate, incurs a computational overhead that scales with dimensionality[cite: 50]. Additionally, the framework is sensitive to the accuracy of the underlying GP; noise in the GP's predictions can mislead the KDE, resulting in suboptimal density estimations[cite: 114].
+
+Immediate next steps for this research include:
+\begin{itemize}
+    \item Quantifying the density shift during optimization to explicitly map where new points are added relative to the initial DoE[cite: 113].
+    \item Adding input replications to improve the robustness of the Bayesian optimization under noise[cite: 114].
+    \item Transitioning validation from the MLP surrogate back to the native, full-scale complex simulator[cite: 115].
+    \item Expanding the evaluation to include other diverse test cases to ensure generalization[cite: 116].
+\end{itemize}
+
+\section{Conclusions and perspectives}
+We have presented a Black-box Active Learning framework that leverages Surrogate Modeling and Explainable AI to drive the exploration of complex systems[cite: 19]. By structuring an active learning loop around the maximization of explanatory diversity, the algorithm efficiently uncovers distinct causal mechanisms and rare behavioral regimes within high-dimensional parameter spaces.
+
+Future perspectives center on refining the methodology's resilience to surrogate noise and applying the framework directly to computationally intensive Agent-Based Models[cite: 114, 115]. Ultimately, this explainability-driven approach provides a pathway from raw simulation data to actionable, interpretable insights for complex decision-making processes[cite: 13, 16].
+
+\section*{Conflict of interest}
+The authors have no conflict of interest to declare.
+
+\section*{Data availability and replication}
+The codes and data used to produce the results are open-source and available online: {\url{https://github.com/ANR-MIMICO/SMPT_XAI}}.
+
+\section*{Acknowledgements}
+This work has been performed in the framework of the MIMICO research project funded by the Agence Nationale de la Recherche (ANR) n$^\text{o}$ ANR-24-CE23-0380. 
+
+%\newpage
+\bibliographystyle{plain}
+\bibliography{sn-bibliography.bib}
+%, biblio_ext.bib}
+\pdfbookmark[1]{References}{sec-refs}
+
+%\break
+\appendix
+
+\section{App.A}
+\end{document}

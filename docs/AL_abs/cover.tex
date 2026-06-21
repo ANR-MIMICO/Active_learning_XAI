@@ -1,0 +1,43 @@
+\documentclass[11pt,a4paper]{letter}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\usepackage{hyperref}
+\geometry{margin=1in}
+
+% --- Sender Information ---
+\address{
+    \textbf{Université Toulouse Capitole, IRIT}\\ 
+        Toulouse, France
+}
+\signature{
+\vspace{-1cm}
+    Dr. Paul Saves \\
+    Université de Toulouse, IRIT, France \\
+    \href{mailto:paul.saves@irit.fr}{paul.saves@irit.fr}
+}
+\date{March 26, 2026}
+
+\begin{document}
+
+% --- Recipient Information ---
+\begin{letter}{
+    Editor-in-Chief \\
+    \textbf{Advanced Engineering Informatics}
+}
+
+\opening{Dear Editor,}
+
+Please consider our manuscript entitled \textbf{``Surrogate Modeling and Explainable Artificial Intelligence for Complex Systems: A Workflow for Automated Simulation Exploration''} for publication in \textit{Advanced Engineering Informatics}.
+
+This manuscript was previously submitted to \textit{Simulation Modelling Practice and Theory} (SIMPAT) (Reference: SIMPAT-D-25-1946), where it underwent a first round of peer review. We have significantly revised the paper to incorporate the reviewers' valuable feedback. Specifically, we have comprehensively rewritten the literature review to position our work against broader methodological gaps (such as the ``fidelity gap'' and out-of-distribution risks in current XAI tools) and streamlined the narrative towards process analysis. We are now transferring this substantially improved manuscript to \textit{Advanced Engineering Informatics}.
+
+This paper proposes a unified, reproducible workflow that couples modeling approaches (design or agent-based), dedicated simulations, surrogate modeling, uncertainty quantification, and explainable AI to accelerate, interpret, and diagnose expensive simulation-based studies. We demonstrate our approach on two realistic case studies: a hybrid-electric aircraft co-design problem with distributed propulsion and electrical architectures, and an agent-based simulation for socio-technical analysis. These examples illustrate how the proposed workflow reduces computational cost, improves insight into complex model behavior, and supports more robust decision-making based on simulations.
+
+We believe the revised manuscript fits perfectly within the aims and scope of \textit{Advanced Engineering Informatics} because it demonstrates a novel methodology for supporting knowledge-intensive engineering tasks. By bridging deterministic engineering simulations and stochastic socio-technical analysis under a unified, domain-agnostic explainability framework, the paper provides the scientific base to make engineering decision-making more reliable, transparent, and creative. The paper explicitly documents model development, surrogate selection adequacy metrics, and validation checks, in line with the journal's expectation that application papers render the modelling and implementation steps transparent to readers.
+
+This work is original and is not under consideration for publication elsewhere. All authors have read and approved the final manuscript. We declare no conflicts of interest. To support reproducibility, we make the code, surrogate models, and datasets used in the experiments publicly available.\\[0.2cm]
+
+\closing{Sincerely,}
+\end{letter}
+\end{document}

@@ -1,0 +1,12 @@
+Okay, bon a remplacé le soft folding et le euclidean distance sur les KDE 1D par une distance cosine similarity sur l'espace via KNN
+Je fais évoluer dynamiquement le alpha, on commence par explorer l'espace, puis on passe sur les explications
+
+SHAP? Tester autres méthodes Post-hoc?
+Décroissance des alphas ? Linéaire ? a tester d'autres formes de courbes - Bon, EHVI MFK c'est quand même nouveau,sans doute des trucs à faire. Alpha random sur le PF ? 
+
+On a fait Deux cas tests => A généraliser sur d'autres cas analytiques et à fine-tuner, genre base de connaaissance
+
+Faudrait faire du vraiSUR Monte-Carlo, peut-être en réudisant la dimension? Faudrait faire des Trust Régions, pour éviter le fléau de la dimension et explorer sans se coincer sur les bords
+
+Les densités SHAP comme valeurs hessienne? En fait la zone transitoire d'un système complexes, au niveau du tipping point, elle est scale-free donc toute les dérivées n-ème seraient théoriquement contrôlable et puis sur le y on a une évolution en exponentielle/logistique
+

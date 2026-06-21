@@ -11,16 +11,20 @@ Rather than standard variance reduction, this derivative-free optimization frame
 
 ## Repository Structure
 
-The methodology has been applied and validated on two distinct complex systems, structured in separate directories:
+The project has been refactored into a modular architecture, separating the core Active Learning engine from the specific Agent-Based Model use-cases.
 
-### 1. [Schelling_ABS](./Schelling_ABS/)
-Application of the EDS framework to the classic Schelling Segregation Model. This directory contains the surrogate models, the Active Learning optimization loops, and the KDE-based density maximization logic mapped onto a 5-dimensional design space.
+### Core Architecture
+- **`src/`**: Contains the core, model-agnostic Active Learning and Surrogate Optimization framework (e.g., `al_xai_optimizer.py`, implementing the SHAP-US and Dynamic-US strategies).
+- **`docs/`**: Contains the mathematical documentation (`docs/al_abs/`), the Beamer presentations with final figures (`docs/slides/`), and expert evaluation reports.
 
-### 2. [Cireco](./cireco/)
-Application of the EDS framework to the Cireco simulation platform (a market environment simulating buyers and sellers exchanging products). This directory contains both the core Cireco ABM and the advanced Sobol/Surrogate sensitivity analysis scripts.
+### ABM Implementations
+Both models follow a standardized internal structure (`data/`, `figures/`, `scripts/`, `notebooks/`):
 
-### Documentation & Reports
-- `docs/`: Contains the project presentation (`v0.pdf`), and comprehensive technical evaluation reports detailing the mathematical algorithms and operations research insights.
+- **`Schelling_ABS/`**: Application of the framework to the classic Schelling Segregation Model on a 5-dimensional design space.
+- **`cireco/`**: Application to the Cireco simulation platform (a market environment simulating buyers and sellers exchanging products).
+
+### Root Level
+- Miscellaneous root scripts (e.g., `plot_entropy_curves.py`) and high-level expert proposals.
 
 ## Methodology High-Level Overview
 
