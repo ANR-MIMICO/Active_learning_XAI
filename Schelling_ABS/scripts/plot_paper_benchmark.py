@@ -5,15 +5,15 @@ import matplotlib.pyplot as plt
 import glob
 
 def plot_paper_benchmark():
-    results_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "processed", "paper_results"))
+    results_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "processed", "paper_results_2"))
     
-    methods = ["LHS", "SUR", "SUR_SHAP", "V4"]
-    colors = {"LHS": "black", "SUR": "blue", "SUR_SHAP": "green", "V4": "red"}
+    methods = ["LHS", "SUR", "SUR_SHAP", "V5"]
+    colors = {"LHS": "black", "SUR": "blue", "SUR_SHAP": "green", "V5": "red"}
     labels = {
         "LHS": "Pure LHS (Baseline)", 
         "SUR": "SUR (Uncertainty only, α=0.0)", 
         "SUR_SHAP": "SUR SHAP (Novelty only, α=1.0)",
-        "V4": "V4 Hybrid (MFK, α=0.5)"
+        "V5": "V4 Hybrid (MFK, α=0.5)"
     }
     
     # We will aggregate data over the 5 seeds

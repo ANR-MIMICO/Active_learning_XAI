@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 def plot_dual_space():
-    results_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "processed", "paper_results_2"))
+    results_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "processed", "paper_results"))
     
     methods = ["LHS", "SUR", "SUR_SHAP", "V5"]
     colors = {"LHS": "black", "SUR": "blue", "SUR_SHAP": "green", "V5": "red"}
@@ -26,7 +26,9 @@ def plot_dual_space():
         df_list_in = []
         df_list_sh = []
         for f in csv_files:
-            df = pd.read_csv(f).set_index('N_Points')
+            df = pd.read_csv(f)
+            if 'N_Points' not in df.columns: continue
+            df = df.set_index('N_Points')
             df_list_in.append(df['Entropy_Input'])
             df_list_sh.append(df['Entropy_SHAP'])
             

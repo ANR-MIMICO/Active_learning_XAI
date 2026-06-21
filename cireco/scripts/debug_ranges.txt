@@ -1,0 +1,14 @@
+RAW DATA RANGES:
+price_to_dispose: [0.0154, 199.9867]
+scarcity: [0.2500, 3.9993]
+density: [0.0000, 0.0999]
+cluster_spread: [0.0000, 0.5000]
+km_cost: [0.0003, 9.9998]
+
+AFTER LOG TRANSFORM:
+price_to_dispose: [0.0154, 199.9867]
+scarcity: [-1.9999, 1.9997]
+density: [-4.9997, -1.0003]
+cluster_spread: [0.0000, 0.5000]
+km_cost: [0.0003, 9.9998]
+Price range: [-179.5752, 100.0000]

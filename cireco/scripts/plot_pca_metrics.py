@@ -6,24 +6,20 @@ from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
-from Schelling_ABS.scripts.paper_benchmark import prepare_simulator
+from cireco.scripts.cireco_paper_benchmark import prepare_simulator
 
 def plot_pca():
-    results_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "processed", "paper_results_2"))
+    results_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "processed", "paper_results"))
     
-    methods = [
-        ("tmp_lhs_42", "LHS"),
-        ("tmp_sur_42", "Space-US"),
-        ("tmp_sur_shap_42", "SHAP-US"),
-        ("tmp_v5_42", "Dynamic-US")
-    ]
+    path_lhs = os.path.join(results_dir, "LHS_seed_42.csv")
+    path_v5 = os.path.join(results_dir, "tmp_v5_42", "al_database.csv")
+    if not os.path.exists(path_v5): path_v5 = os.path.join(results_dir, "tmp_v5_42", "al_database_loop_49.csv")
     
-    lhs_file = os.path.join(results_dir, "tmp_lhs_42", "al_database.csv")
-    if not os.path.exists(lhs_file):
+    if not os.path.exists(path_lhs) or not os.path.exists(path_v5):
         print("LHS data not found, skipping PCA plot")
         return
         
-    df_lhs = pd.read_csv(lhs_file)
+    df_lhs = pd.read_csv(path_lhs)
     X_lhs = df_lhs.iloc[:, :5].values
     
     scaler = StandardScaler()
@@ -32,7 +28,7 @@ def plot_pca():
     pca.fit(X_scaled)
     
     # --- GET TRUE SIMULATOR FOR BACKGROUND CONTOUR ---
-    mlp, mlp_scaler = prepare_simulator()
+    simulator = prepare_simulator()
     
     fig, axes = plt.subplots(1, 4, figsize=(24, 6))
     fig.suptitle('PCA Projection - Visualizing Tipping Point Hunting (Seed 42)', fontsize=18, fontweight='bold')
@@ -42,12 +38,17 @@ def plot_pca():
     y_min, y_max = -3, 3
     xx, yy = np.meshgrid(np.linspace(x_min, x_max, 100), np.linspace(y_min, y_max, 100))
     grid_2d = np.c_[xx.ravel(), yy.ravel()]
-    # Inverse transform to 5D scaled, then inverse to 5D real, then feed to simulator
-    grid_5d_scaled = pca.inverse_transform(grid_2d)
-    grid_5d_real = scaler.inverse_transform(grid_5d_scaled)
-    Z = mlp.predict_proba(mlp_scaler.transform(grid_5d_real))[:, 1]
+    grid_original = pca.inverse_transform(grid_2d)
+    grid_unscaled = scaler.inverse_transform(grid_original)
+    
+    Z = simulator(grid_unscaled)
     Z = Z.reshape(xx.shape)
     
+    methods = [("tmp_lhs_42", "LHS Baseline"), 
+               ("tmp_sur_42", "SUR"), 
+               ("tmp_sur_shap_42", "SUR_SHAP (V4)"), 
+               ("tmp_v5_42", "Hybrid V5")]
+               
     for ax, (folder, title) in zip(axes, methods):
         csv_path = os.path.join(results_dir, folder, "al_database.csv")
         if not os.path.exists(csv_path):

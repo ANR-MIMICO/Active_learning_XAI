@@ -6,13 +6,13 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 def plot_1d_histograms():
-    results_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "processed", "paper_results_2"))
+    results_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "processed", "paper_results"))
     
     methods = ["tmp_lhs_42", "tmp_sur_42", "tmp_sur_shap_42", "tmp_v5_42"]
     titles = {"tmp_lhs_42": "LHS", "tmp_sur_42": "Space-US", "tmp_sur_shap_42": "SHAP-US", "tmp_v5_42": "Dynamic-US"}
     colors = {"tmp_lhs_42": "black", "tmp_sur_42": "blue", "tmp_sur_shap_42": "green", "tmp_v5_42": "red"}
     
-    var_names = ["Radius", "Ratio", "Tolerance", "Grid Size", "N Groups"]
+    var_names = ["Price_Dispose", "Scarcity", "Density", "Cluster", "Km_Cost"]
     
     fig, axes = plt.subplots(5, 1, figsize=(10, 15))
     fig.suptitle('1D Histograms per Variable (Active Learning Additions)', fontsize=16, fontweight='bold')
@@ -37,14 +37,24 @@ def plot_1d_histograms():
             color_list.append(colors[m])
             
         # Custom bins for each variable
-        if var_name == "Radius":
-            bins_to_use = np.arange(1.5, 6.5, 1) # Centers at 2, 3, 4, 5
-        elif var_name == "N Groups":
-            bins_to_use = np.arange(0.5, 11.5, 1) # Centers at 1, 2, ..., 10
-        elif var_name == "Grid Size":
-            bins_to_use = np.linspace(10, 40, 11)
+        if var_name == "Price_Dispose":
+            bins_to_use = np.linspace(0, 200, 11)
+            xticks = np.linspace(0, 200, 5)
+        elif var_name == "Scarcity":
+            bins_to_use = np.linspace(-2, 2, 11)
+            xticks = np.linspace(-2, 2, 5)
+        elif var_name == "Density":
+            bins_to_use = np.linspace(-4, -1, 11)
+            xticks = np.linspace(-4, -1, 4)
+        elif var_name == "Cluster":
+            bins_to_use = np.linspace(0, 0.5, 11)
+            xticks = np.linspace(0, 0.5, 6)
+        elif var_name == "Km_Cost":
+            bins_to_use = np.linspace(0, 10, 11)
+            xticks = np.linspace(0, 10, 6)
         else:
-            bins_to_use = np.linspace(0, 1, 11) # For Ratio and Tolerance
+            bins_to_use = np.linspace(0, 1, 11)
+            xticks = None
             
         # Plot stacked bar chart
         if data_list:
@@ -52,9 +62,9 @@ def plot_1d_histograms():
             
         ax.set_title(f'Distribution of {var_name}', fontweight='bold')
         ax.set_ylabel('Density')
-        if var_name == "Radius":
+        if var_name == "Price_Dispose":
             ax.set_xticks([2, 3, 4, 5])
-        elif var_name == "N Groups":
+        elif var_name == "Km_Cost":
             ax.set_xticks(range(1, 11))
         if i == 0:
             ax.legend(loc='upper right')

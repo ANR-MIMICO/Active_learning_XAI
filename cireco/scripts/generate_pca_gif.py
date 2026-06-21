@@ -8,13 +8,13 @@ from sklearn.preprocessing import StandardScaler
 from PIL import Image
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
-from Schelling_ABS.scripts.paper_benchmark import prepare_simulator
+from cireco.scripts.cireco_paper_benchmark import prepare_simulator
 
 def generate_pca_gif_for_method(results_dir, method, seed=42):
     folder = os.path.join(results_dir, f"tmp_{method}_{seed}")
     if not os.path.exists(folder): return
         
-    lhs_file = os.path.join(results_dir, f"tmp_lhs_{seed}", "al_database.csv")
+    lhs_file = os.path.join(results_dir, f"LHS_seed_{seed}.csv")
     if not os.path.exists(lhs_file): return
         
     df_lhs = pd.read_csv(lhs_file)
@@ -25,14 +25,14 @@ def generate_pca_gif_for_method(results_dir, method, seed=42):
     pca.fit(X_scaled)
     
     # --- GET TRUE SIMULATOR FOR BACKGROUND CONTOUR ---
-    mlp, mlp_scaler = prepare_simulator()
+    simulator = prepare_simulator()
     x_min, x_max = -3, 4
     y_min, y_max = -3, 3
     xx, yy = np.meshgrid(np.linspace(x_min, x_max, 100), np.linspace(y_min, y_max, 100))
     grid_2d = np.c_[xx.ravel(), yy.ravel()]
     grid_5d_scaled = pca.inverse_transform(grid_2d)
     grid_5d_real = scaler.inverse_transform(grid_5d_scaled)
-    Z = mlp.predict_proba(mlp_scaler.transform(grid_5d_real))[:, 1]
+    Z = simulator(grid_5d_real)
     Z = Z.reshape(xx.shape)
     
     frames = []
@@ -56,8 +56,8 @@ def generate_pca_gif_for_method(results_dir, method, seed=42):
         plt.title(f"PCA Projection - {method_title} Evolution (Loop {loop})", fontsize=16, fontweight='bold')
         
         # Plot background contour
-        plt.contourf(xx, yy, Z, levels=20, cmap='coolwarm', alpha=0.4)
-        plt.contour(xx, yy, Z, levels=[0.5], colors='black', linewidths=2, linestyles='--')
+        plt.contourf(xx, yy, Z, levels=20, cmap='viridis', alpha=0.4)
+        plt.contour(xx, yy, Z, levels=[70], colors='black', linewidths=2, linestyles='--')
         
         plt.scatter(X_proj[:30, 0], X_proj[:30, 1], c='grey', alpha=0.6, label='Initial DoE (30 pts)', s=50, edgecolors='white')
         
@@ -78,7 +78,7 @@ def generate_pca_gif_for_method(results_dir, method, seed=42):
         frames.append(frame_path)
         
     if frames:
-        gif_path = os.path.join(results_dir, "..", "..", "figures", "analysis", f"{method.lower()}_evolution_pca.gif")
+        gif_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "figures", "analysis", f"{method.lower()}_evolution_pca.gif"))
         images = [Image.open(f) for f in frames]
         for _ in range(10): images.append(images[-1])
         images[0].save(gif_path, save_all=True, append_images=images[1:], duration=200, loop=0)
@@ -89,7 +89,7 @@ def generate_pca_gif_for_method(results_dir, method, seed=42):
     except: pass
 
 def generate_all_gifs():
-    results_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "processed", "paper_results_2"))
+    results_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "processed", "paper_results"))
     for method in ['lhs', 'sur', 'sur_shap', 'v5']:
         generate_pca_gif_for_method(results_dir, method, seed=42)
 

@@ -62,16 +62,25 @@ def run_seed_task(args):
         IntegerVariable(10, 40), IntegerVariable(1, 10),
     ])
     
-    out_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "processed", "paper_results"))
+    out_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "processed", "paper_results_2"))
     os.makedirs(out_dir, exist_ok=True)
     csv_path = os.path.join(out_dir, f"{method}_seed_{seed}.csv")
     
-    # 3. Generate Initial DoE (always 30 points)
-    samp = LHS(xlimits=design_space.get_num_bounds(), criterion="ese")
-    x_initial = samp(30)
-    for i, var in enumerate(design_space.design_variables):
-        if isinstance(var, IntegerVariable): x_initial[:, i] = np.round(x_initial[:, i])
-    y_initial = simulator(x_initial)
+    # 3. Generate Initial DoE (always 30 points) - Load from existing LHS to ensure identical start
+    base_lhs_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "processed", "paper_results"))
+    lhs_csv = os.path.join(base_lhs_dir, f"tmp_lhs_{seed}", "al_database_loop_0.csv")
+    
+    if os.path.exists(lhs_csv):
+        df_init = pd.read_csv(lhs_csv)
+        x_initial = df_init.iloc[:, :5].values
+        y_initial = df_init["Target"].values
+    else:
+        # Fallback (shouldn't happen if LHS was run)
+        samp = LHS(xlimits=design_space.get_num_bounds(), criterion="ese")
+        x_initial = samp(30)
+        for i, var in enumerate(design_space.design_variables):
+            if isinstance(var, IntegerVariable): x_initial[:, i] = np.round(x_initial[:, i])
+        y_initial = simulator(x_initial)
     
     if method == "LHS":
         # Pure LHS from 30 to 80 points
@@ -116,13 +125,20 @@ def run_seed_task(args):
         al.run(output_dir=os.path.join(out_dir, f"tmp_sur_shap_{seed}"))
         # Move the CSV
         os.rename(os.path.join(out_dir, f"tmp_sur_shap_{seed}", "al_metrics_history.csv"), csv_path)
+        
+    elif method == "V5":
+        # Dynamic Annealing: Starts at 0.0 (Space-US) and ends at 1.0 (SHAP-US)
+        al = ActiveLearningXAI(simulator, design_space, x_initial, y_initial, alpha_start=0.0, alpha_end=1.0, total_loops=50, mode='v4')
+        al.run(output_dir=os.path.join(out_dir, f"tmp_v5_{seed}"))
+        # Move the CSV
+        os.rename(os.path.join(out_dir, f"tmp_v5_{seed}", "al_metrics_history.csv"), csv_path)
 
     print(f"--- FINISHED: {method} - Seed {seed} ---")
     return True
 
 if __name__ == '__main__':
     seeds = [42, 100, 2026, 777, 12345]
-    methods = ["LHS", "SUR", "V4", "SUR_SHAP"]
+    methods = ["SUR", "V5", "SUR_SHAP"] # Run the 3 AL methods
     
     tasks = []
     for m in methods:
