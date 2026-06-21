@@ -204,14 +204,14 @@ Visualization of the "Evolution of Sparsity vs Features" demonstrates the algori
 
 \begin{figure}[hbt!]
     \centering
-    \includegraphics[width=0.8\textwidth]{schelling_final_hybrid_diff_profile.png}
+    \includegraphics[width=0.8\textwidth]{Images/schelling_final_hybrid_diff_profile.png}
     \caption{Hybrid density difference profile (\textbf{Dynamic-US minus LHS}). Green regions indicate narrow parameter bands intentionally over-sampled by the active learner, while red regions are actively ignored. By avoiding the curse of dimensionality inherent in purely global exploration, Dynamic-US aggressively targets specific boundary regions where the multi-dimensional tipping points reside.}
     \label{fig:hybrid_diff}
 \end{figure}
 
 \begin{figure}[hbt!]
     \centering
-    \includegraphics[width=0.8\textwidth]{schelling_input_space_comparison_2D_frontier.png}
+    \includegraphics[width=0.8\textwidth]{Images/schelling_input_space_comparison_2D_frontier.png}
     \caption{2D Input Space Comparison showing the targeted boundary frontier. Unlike uniform space-filling designs, our approach tightly clusters samples along the non-linear boundaries where macroscopic phase transitions occur, explicitly tracking the tipping points.}
     \label{fig:schelling_frontier}
 \end{figure}
@@ -221,7 +221,7 @@ The efficacy of the proposed active learning framework is visually demonstrated 
 
 \begin{figure}[hbt!]
     \centering
-    \includegraphics[width=0.8\textwidth]{shap_RF_conv(1).png}
+    \includegraphics[width=0.8\textwidth]{Images/shap_RF_conv(1).png}
     \caption{SHAP summary plot for model convergence. Traditional space-filling designs suffer from the curse of dimensionality, often over-sampling the homogeneous bulk (clustering near zero). Conversely, our active learning loop explicitly uncovers isolated "islands" of feature contributions. These sparse regions represent critical internal logic shifts in the explanatory space, directly corresponding to the system's physical tipping points.}
     \label{fig:shap_conv}
 \end{figure}
@@ -237,7 +237,7 @@ Furthermore, the utilization of Partial Dependence Plots (PDP) and Individual Co
 
 \begin{figure}[hbt!]
     \centering
-    \includegraphics[width=0.8\textwidth]{cireco_pdp_ice_density_price.png}
+    \includegraphics[width=0.8\textwidth]{Images/cireco_pdp_ice_density_price.png}
     \caption{Partial Dependence (PDP) and Individual Conditional Expectation (ICE) plots colored by sampling density. This visualization illustrates macroscopic ruptures in the parameter space (e.g., sharp divergence at specific density thresholds). When paired with explanatory shifts, these divergences reveal the system's "dual tipping points"—critical phase transitions in both the physical predictions and the underlying causal mechanisms, mapped efficiently without exhaustive simulation.}
     \label{fig:pdp_ice}
 \end{figure}
@@ -247,7 +247,7 @@ The active learning framework successfully maps these critical behavioral thresh
 \subsection{Dual Space Efficiency}
 \begin{figure}[hbt!]
     \centering
-    \includegraphics[width=0.8\textwidth]{cireco_final_dual_space_efficiency.png}
+    \includegraphics[width=0.8\textwidth]{Images/cireco_final_dual_space_efficiency.png}
     \caption{Evaluation of exploration efficiency across physical (left) and explanatory (right) spaces. While traditional methods increase physical entropy linearly, the Dynamic-US strategy achieves a rapid, non-linear gain in explanatory entropy. This "dual space efficiency" proves that prioritizing explanatory novelty simultaneously accelerates the discovery of complex physical tipping points, drastically reducing the overall simulation budget.}
     \label{fig:dual_space}
 \end{figure}
