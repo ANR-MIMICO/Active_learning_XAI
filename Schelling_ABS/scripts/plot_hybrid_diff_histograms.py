@@ -7,21 +7,30 @@ import matplotlib.pyplot as plt
 def plot_hybrid_diff():
     results_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "processed", "paper_results_2"))
     
-    var_names = ["Radius", "Ratio", "Tolerance", "Grid Size", "N Groups"]
+    var_names = ["Radius", "Density", "Tolerance", "Grid Size", "N Groups"]
     
     # Paths for LHS and Hybrid-US
-    path_lhs = os.path.join(results_dir, "tmp_lhs_42", "al_database.csv")
-    if not os.path.exists(path_lhs): path_lhs = os.path.join(results_dir, "tmp_lhs_42", "al_database_loop_49.csv")
-        
-    path_v4 = os.path.join(results_dir, "tmp_v5_42", "al_database.csv")
-    if not os.path.exists(path_v4): path_v4 = os.path.join(results_dir, "tmp_v5_42", "al_database_loop_49.csv")
+    seeds = [42, 100, 2026, 777, 12345]
     
-    if not os.path.exists(path_lhs) or not os.path.exists(path_v4):
+    df_lhs_list = []
+    df_v4_list = []
+    for seed in seeds:
+        path_lhs = os.path.join(results_dir, f"tmp_lhs_{seed}", "al_database_loop_49.csv")
+        if not os.path.exists(path_lhs): path_lhs = os.path.join(results_dir, f"LHS_seed_{seed}.csv")
+        
+        path_v4 = os.path.join(results_dir, f"tmp_v5_{seed}", "al_database_loop_49.csv")
+        if not os.path.exists(path_v4): path_v4 = os.path.join(results_dir, f"tmp_v5_{seed}", "al_database.csv")
+        
+        if os.path.exists(path_lhs) and os.path.exists(path_v4):
+            df_lhs_list.append(pd.read_csv(path_lhs))
+            df_v4_list.append(pd.read_csv(path_v4))
+            
+    if not df_lhs_list or not df_v4_list:
         print("Missing data for difference plot")
         return
         
-    df_lhs = pd.read_csv(path_lhs)
-    df_v4 = pd.read_csv(path_v4)
+    df_lhs = pd.concat(df_lhs_list, ignore_index=True)
+    df_v4 = pd.concat(df_v4_list, ignore_index=True)
     
     fig, axes = plt.subplots(5, 1, figsize=(10, 15))
     fig.suptitle('Targeted Search Profile ($\Delta$ Density: Hybrid-US minus LHS)', fontsize=16, fontweight='bold')

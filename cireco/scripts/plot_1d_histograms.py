@@ -8,14 +8,15 @@ import seaborn as sns
 def plot_1d_histograms():
     results_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "processed", "paper_results"))
     
-    methods = ["tmp_lhs_42", "tmp_sur_42", "tmp_sur_shap_42", "tmp_v5_42"]
-    titles = {"tmp_lhs_42": "LHS", "tmp_sur_42": "Space-US", "tmp_sur_shap_42": "SHAP-US", "tmp_v5_42": "Dynamic-US"}
-    colors = {"tmp_lhs_42": "black", "tmp_sur_42": "blue", "tmp_sur_shap_42": "green", "tmp_v5_42": "red"}
+    methods = ["lhs", "sur", "sur_shap", "v5"]
+    titles = {"lhs": "LHS", "sur": "Space-US", "sur_shap": "SHAP-US", "v5": "Dynamic-US"}
+    colors = {"lhs": "black", "sur": "blue", "sur_shap": "green", "v5": "red"}
+    seeds = [42, 100, 2026, 777, 12345]
     
     var_names = ["Price_Dispose", "Scarcity", "Density", "Cluster", "Km_Cost"]
     
     fig, axes = plt.subplots(5, 1, figsize=(10, 15))
-    fig.suptitle('1D Histograms per Variable (Active Learning Additions)', fontsize=16, fontweight='bold')
+    fig.suptitle('1D Histograms per Variable (Aggregated over 5 seeds)', fontsize=16, fontweight='bold')
     
     for i, var_name in enumerate(var_names):
         ax = axes[i]
@@ -25,14 +26,19 @@ def plot_1d_histograms():
         color_list = []
         
         for m in methods:
-            csv_path = os.path.join(results_dir, m, "al_database.csv")
-            if not os.path.exists(csv_path):
-                csv_path = os.path.join(results_dir, m, "al_database_loop_49.csv")
-                if not os.path.exists(csv_path): continue
-                
-            df = pd.read_csv(csv_path)
-            # Use all 80 points
-            data_list.append(df.iloc[:, i].values)
+            df_seeds = []
+            for seed in seeds:
+                folder_name = f"tmp_{m}_{seed}"
+                csv_path = os.path.join(results_dir, folder_name, "al_database_loop_49.csv")
+                if not os.path.exists(csv_path):
+                    csv_path = os.path.join(results_dir, folder_name, "al_database.csv")
+                if os.path.exists(csv_path):
+                    df_seeds.append(pd.read_csv(csv_path))
+            
+            if not df_seeds: continue
+            df_combined = pd.concat(df_seeds, ignore_index=True)
+            
+            data_list.append(df_combined.iloc[:, i].values)
             label_list.append(titles[m])
             color_list.append(colors[m])
             

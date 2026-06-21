@@ -44,10 +44,10 @@ def plot_pca():
     Z = simulator(grid_unscaled)
     Z = Z.reshape(xx.shape)
     
-    methods = [("tmp_lhs_42", "LHS Baseline"), 
-               ("tmp_sur_42", "SUR"), 
-               ("tmp_sur_shap_42", "SUR_SHAP (V4)"), 
-               ("tmp_v5_42", "Hybrid V5")]
+    methods = [("tmp_lhs_42", "LHS"), 
+               ("tmp_sur_42", "Space-US"), 
+               ("tmp_sur_shap_42", "SHAP-US"), 
+               ("tmp_v5_42", "Dynamic-US")]
                
     for ax, (folder, title) in zip(axes, methods):
         csv_path = os.path.join(results_dir, folder, "al_database.csv")
