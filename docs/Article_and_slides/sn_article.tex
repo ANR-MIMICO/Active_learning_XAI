@@ -130,7 +130,7 @@ Our proposed methodology relies on an iterative Bayesian active learning loop de
     \begin{equation}
         a_{Dynamic}(x) = (1 - \alpha^{(t)}) \cdot \widetilde{\sigma}^2_{GP}(x) + \alpha^{(t)} \cdot \widetilde{\text{EI}}_{MFK}(S(x))
     \end{equation}
-    The parameter $\alpha^{(t)}$ smoothly sweeps the Pareto front across iterations via a dynamic schedule $\alpha^{(t)} = \alpha_{start} + (\alpha_{end} - \alpha_{start}) \frac{t}{T}$. This identifies the next optimal sampling point, $x_{opt}$, blending standard uncertainty reduction with explanation-driven novelty[cite: 81].
+    The parameter $\alpha^{(t)}$ smoothly sweeps the Pareto front across iterations via a dynamic schedule $\alpha^{(t)} = \alpha_{start} + (\alpha_{end} - \alpha_{start}) \frac{t}{T}$. This continuous acquisition surface is optimized globally using Differential Evolution to identify the next optimal sampling point, $x_{opt}$, blending standard uncertainty reduction with explanation-driven novelty[cite: 81].
     
     \item \textbf{Update:} The expensive black-box simulator is queried at the new point $x_{opt}$ to retrieve $y_{opt}$[cite: 102]. The exact dataset is then updated ($x_{doe} := x_{doe} \cup x_{opt}$ and $y_{doe} := y_{doe} \cup y_{opt}$), and the loop repeats[cite: 103, 104].
 \end{enumerate}
@@ -257,7 +257,7 @@ The primary advantage of this framework is its shift in focus from prediction ac
 
 However, there are current limitations regarding scalability. Computing ExactSHAP values, even on a fast GP surrogate, incurs a computational overhead of $\mathcal{O}(2^M)$ that scales exponentially with dimensionality $M$[cite: 50]. While the transition from classical KDE ($\mathcal{O}(N \cdot d)$ with complex bandwidth selection) to the Fast Cosine Proxy ($\mathcal{O}(N \log N)$) resolved the novelty estimation bottleneck, surrogate inference remains the primary limiting factor for scaling to $M > 15$ parameters.
 
-From an operations research perspective, several mathematical enhancements could further robustify the acquisition process. First, the current linear scalarization of the bi-objective optimization could be replaced with Expected Hypervolume Improvement (EHVI) or NSGA-II to properly identify non-convex regions of the Pareto front. Second, the highly multimodal and non-stationary nature of the SHAP novelty landscape suggests that replacing the local L-BFGS-B acquisition optimizer with a global derivative-free optimizer like CMA-ES, or employing Trust-Region Bayesian Optimization (TuRBO), would significantly improve surrogate calibration and convergence.
+From an operations research perspective, several mathematical enhancements could further robustify the acquisition process. First, the current linear scalarization of the bi-objective optimization could be replaced with Expected Hypervolume Improvement (EHVI) or NSGA-II to properly identify non-convex regions of the Pareto front. Second, the highly multimodal and non-stationary nature of the SHAP novelty landscape suggests that upgrading the current Differential Evolution acquisition optimizer to Covariance Matrix Adaptation Evolution Strategy (CMA-ES), or employing Trust-Region Bayesian Optimization (TuRBO), would significantly improve surrogate calibration and convergence.
 
 Immediate next steps for this research include:
 \begin{itemize}

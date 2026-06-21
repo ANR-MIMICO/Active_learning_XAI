@@ -83,31 +83,32 @@
   \end{figure}
 \end{frame}
 
-\begin{frame}[fragile]{Algorithmic Innovations (I): Fast Cosine Proxy}
-  \textbf{From Slow KDE to Fast Cosine Proxy:}
+\begin{frame}[fragile]{1. Dual-Surrogates \& SHAP Data Augmentation}
+  \textbf{Bypassing the ABM Computational Bottleneck:}
   \begin{itemize}
-      \item The initial theory relied on high-dimensional Kernel Density Estimation (KDE) on SHAP values:
-      $$p_{SHAP}(S(x)) = \frac{1}{N} \sum_{i=1}^N K_h(S(x) - S(x_i))$$
-      \item \textbf{The Upgrade:} KDE suffers from the curse of dimensionality and is computationally prohibitive.
-      \item \textbf{The Solution:} We implemented a \textbf{Fast Density Proxy via Cosine Distance} (Nearest Neighbors) in SHAP space. High cosine distance translates directly to high explanatory novelty.
+      \item \textbf{Primary GP (Physical Space):} Trained directly on the true ABM outputs. It acts as an ultra-fast proxy for the simulation.
+      \item \textbf{Data Augmentation Trick:} ExactSHAP computations are exponentially expensive ($\mathcal{O}(2^M)$). We use the Primary GP to generate thousands of cheap SHAP profiles (\textit{Low-Fidelity}).
+      \item \textbf{The Result:} A massive, augmented dataset combining a few exact ABM profiles (\textit{High-Fidelity}) and thousands of GP-derived profiles, providing dense explanatory context.
   \end{itemize}
 \end{frame}
 
-\begin{frame}[fragile]{Algorithmic Innovations (II): Bi-Objective Optimization}
-  \textbf{Framing Dynamic-US as a Bi-Objective Problem:}
-  
-  Rather than a static heuristic, the acquisition strategy sweeps a Pareto front to simultaneously:
-  \begin{enumerate}
-      \item \textbf{Maximize Physical Exploration:} Predictive variance in input space ($\sigma^2_{GP}$).
-      \item \textbf{Maximize Explanatory Exploitation:} Novelty via Cosine distance in SHAP space ($\text{EI}_{MFK}$).
-  \end{enumerate}
-  
-  $$a_{Dynamic}(x) = (1 - \alpha^{(t)}) \cdot \widetilde{\sigma}^2_{GP}(x) + \alpha^{(t)} \cdot \widetilde{\text{EI}}_{MFK}(S(x))$$
-  
+\begin{frame}[fragile]{2. The Fast Density Proxy (k-NN \& Cosine)}
+  \textbf{How do we mathematically define "Novelty"?}
   \begin{itemize}
-      \item Over iterations, $\alpha^{(t)}$ shifts dynamically from $0.0 \to 1.0$.
-      \item \textbf{Result:} It maps the macroscopic behavior first, then pivots to isolate the complex \textbf{tipping points}.
+      \item \textbf{The Problem with KDE:} Classical Kernel Density Estimation using Euclidean distance collapses in high dimensions (curse of dimensionality).
+      \item \textbf{The Cosine Proxy:} We measure the \textbf{Cosine Distance} between a candidate's SHAP profile and its $k$-Nearest Neighbors (k-NN) in the historical dataset.
+      \item \textbf{Why Cosine?} It evaluates the \textit{directional alignment} of feature contributions rather than raw magnitude, isolating points where the internal causal logic fundamentally rotates.
   \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{3. Dynamic Hybrid Acquisition (EI \& $\alpha$)}
+  \textbf{Closing the Active Learning Loop:}
+  \begin{itemize}
+      \item \textbf{Multi-Fidelity Kriging (MFK):} A second surrogate is trained strictly on the computed Cosine Novelties to map the topography of the explanatory space.
+      \item \textbf{Expected Improvement:} The MFK provides both a novelty prediction and its uncertainty, allowing us to compute $\text{EI}_{MFK}$ (the potential for discovering a highly novel explanation).
+      \item \textbf{Dynamic Scalarization ($\alpha$):} We dynamically sweep a Pareto front between spatial uncertainty ($\sigma_{GP}$) and explanatory novelty ($\text{EI}_{MFK}$):
+  \end{itemize}
+  $$a_{Dynamic}(x) = (1 - \alpha^{(t)}) \cdot \widetilde{\sigma}^2_{GP}(x) + \alpha^{(t)} \cdot \widetilde{\text{EI}}_{MFK}(S(x))$$
 \end{frame}
 
 \section{Results \& Analysis}
@@ -210,7 +211,7 @@
   \begin{itemize}
       \item \textbf{Multi-Objective DFO (EHVI):} Replacing linear scalarization with Expected Hypervolume Improvement to capture non-convex regions of the Pareto front.
       \item \textbf{Trust-Region Bayesian Optimization (TuRBO):} Using dynamically sized local trust regions to handle the inherently non-stationary landscapes of SHAP novelty.
-      \item \textbf{Global Solvers (CMA-ES):} Upgrading the acquisition optimizer from L-BFGS-B to Covariance Matrix Adaptation Evolution Strategy to avoid local minima traps in the multimodal novelty surface.
+      \item \textbf{Global Solvers (CMA-ES):} Upgrading the acquisition optimizer from Differential Evolution to Covariance Matrix Adaptation Evolution Strategy to avoid local minima traps in the multimodal novelty surface.
   \end{itemize}
 \end{frame}
 
