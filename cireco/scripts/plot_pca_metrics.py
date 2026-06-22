@@ -9,7 +9,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..",
 from cireco.scripts.cireco_paper_benchmark import prepare_simulator
 
 def plot_pca():
-    results_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "processed", "paper_results"))
+    results_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "processed", "paper_results_2"))
     
     path_lhs = os.path.join(results_dir, "tmp_lhs_42", "al_database_loop_0.csv")
     path_v5 = os.path.join(results_dir, "tmp_v5_42", "al_database.csv")

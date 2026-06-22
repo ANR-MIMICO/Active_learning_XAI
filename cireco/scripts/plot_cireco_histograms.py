@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 def plot_histograms():
-    results_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "processed", "paper_results"))
+    results_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "processed", "paper_results_2"))
     
     var_names = ["Price_Dispose", "Scarcity", "Density", "Cluster_Spread", "Km_Cost"]
     

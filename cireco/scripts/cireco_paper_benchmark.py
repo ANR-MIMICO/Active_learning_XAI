@@ -57,7 +57,7 @@ def run_seed_task(args):
         FloatVariable(0, 10),   # 4. km_cost
     ])
     
-    out_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "processed", "paper_results"))
+    out_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "processed", "paper_results_2"))
     os.makedirs(out_dir, exist_ok=True)
     csv_path = os.path.join(out_dir, f"{method}_seed_{seed}.csv")
     
@@ -106,6 +106,16 @@ def run_seed_task(args):
         al.run(output_dir=os.path.join(out_dir, f"tmp_v5_{seed}"))
         os.rename(os.path.join(out_dir, f"tmp_v5_{seed}", "al_metrics_history.csv"), csv_path)
 
+    elif method == "V6_SUR":
+        al = ActiveLearningXAI(simulator, design_space, x_initial, y_initial, alpha_start=0.0, alpha_end=0.0, total_loops=50, mode='v6')
+        al.run(output_dir=os.path.join(out_dir, f"tmp_v6_sur_{seed}"))
+        os.rename(os.path.join(out_dir, f"tmp_v6_sur_{seed}", "al_metrics_history.csv"), csv_path)
+        
+    elif method == "V6_DYN":
+        al = ActiveLearningXAI(simulator, design_space, x_initial, y_initial, alpha_start=0.0, alpha_end=1.0, total_loops=50, mode='v6')
+        al.run(output_dir=os.path.join(out_dir, f"tmp_v6_dyn_{seed}"))
+        os.rename(os.path.join(out_dir, f"tmp_v6_dyn_{seed}", "al_metrics_history.csv"), csv_path)
+
     print(f"--- FINISHED: {method} - Seed {seed} ---")
     return True
 
@@ -117,7 +127,8 @@ if __name__ == '__main__':
         run_seed_task((s, "LHS"))
         
     print("Launching AL algorithms in parallel...")
-    methods = ["SUR", "V5", "SUR_SHAP"]
+    # We only run the new V6 methods since V5 and SUR are outdated
+    methods = ["V6_SUR", "V6_DYN"]
     
     tasks = []
     for m in methods:

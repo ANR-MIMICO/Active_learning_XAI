@@ -90,7 +90,7 @@ def generate_pca_gif_for_method(results_dir, method, seed=42):
 
 def generate_all_gifs():
     results_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "processed", "paper_results_2"))
-    for method in ['lhs', 'sur', 'sur_shap', 'v5']:
+    for method in ['lhs', 'sur_shap', 'v6_sur', 'v6_dyn']:
         generate_pca_gif_for_method(results_dir, method, seed=42)
 
 if __name__ == "__main__":

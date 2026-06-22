@@ -33,9 +33,9 @@ def plot_boundary():
     mlp, scaler = get_simulator()
     results_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "processed", "paper_results_2"))
     
-    methods = ["LHS", "SUR", "V5", "SUR_SHAP"]
-    colors = {"LHS": "black", "SUR": "blue", "V5": "red", "SUR_SHAP": "green"}
-    labels = {"LHS": "LHS", "SUR": "Space-US", "V5": "Dynamic-US", "SUR_SHAP": "SHAP-US"}
+    methods = ["LHS", "SUR_SHAP", "V6_SUR", "V6_DYN"]
+    colors = {"LHS": "black", "SUR_SHAP": "green", "V6_SUR": "blue", "V6_DYN": "red"}
+    labels = {"LHS": "LHS", "SUR_SHAP": "SHAP-CS", "V6_SUR": "IMSE-US", "V6_DYN": "Dynamic-US"}
     
     plt.figure(figsize=(10, 6))
     

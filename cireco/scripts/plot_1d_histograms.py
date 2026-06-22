@@ -6,11 +6,11 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 def plot_1d_histograms():
-    results_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "processed", "paper_results"))
+    results_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "processed", "paper_results_2"))
     
-    methods = ["lhs", "sur", "sur_shap", "v5"]
-    titles = {"lhs": "LHS", "sur": "Space-US", "sur_shap": "SHAP-US", "v5": "Dynamic-US"}
-    colors = {"lhs": "black", "sur": "blue", "sur_shap": "green", "v5": "red"}
+    methods = ["lhs", "sur_shap", "v6_sur", "v6_dyn"]
+    titles = {"lhs": "LHS", "sur_shap": "SHAP-CS", "v6_sur": "IMSE-US", "v6_dyn": "Dynamic-US"}
+    colors = {"lhs": "black", "sur_shap": "green", "v6_sur": "blue", "v6_dyn": "red"}
     seeds = [42, 100, 2026, 777, 12345]
     
     var_names = ["Price_Dispose", "Scarcity", "Density", "Cluster", "Km_Cost"]
@@ -62,12 +62,13 @@ def plot_1d_histograms():
             bins_to_use = np.linspace(0, 1, 11)
             xticks = None
             
-        # Plot stacked bar chart
+        # Plot stacked bar chart with manual weights so each method sums to 1
         if data_list:
-            ax.hist(data_list, bins=bins_to_use, density=True, histtype='barstacked', label=label_list, color=color_list, alpha=0.8, edgecolor='black', linewidth=0.5)
+            weights_list = [np.ones_like(d) / len(d) for d in data_list]
+            ax.hist(data_list, bins=bins_to_use, density=False, weights=weights_list, histtype='barstacked', label=label_list, color=color_list, alpha=0.8, edgecolor='black', linewidth=0.5)
             
         ax.set_title(f'Distribution of {var_name}', fontweight='bold')
-        ax.set_ylabel('Density')
+        ax.set_ylabel('Proportion (Sums to 1)')
         if var_name == "Price_Dispose":
             ax.set_xticks([2, 3, 4, 5])
         elif var_name == "Km_Cost":

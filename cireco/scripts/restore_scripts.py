@@ -19,7 +19,7 @@ for f in files:
     
     # 1. Base replacements
     content = content.replace('Schelling_ABS', 'cireco')
-    content = content.replace('paper_results_2', 'paper_results')
+    content = content.replace('paper_results_2', 'paper_results_2')
     
     # 2. Path correction: force output to cireco\data\figures\analysis
     # In Schelling, out_img was usually:

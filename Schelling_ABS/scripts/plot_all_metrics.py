@@ -7,13 +7,13 @@ import glob
 def plot_all_metrics():
     results_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "processed", "paper_results_2"))
     
-    methods = ["LHS", "SUR", "SUR_SHAP", "V5"]
-    colors = {"LHS": "black", "SUR": "blue", "SUR_SHAP": "green", "V5": "red"}
+    methods = ["LHS", "SUR_SHAP", "V6_SUR", "V6_DYN"]
+    colors = {"LHS": "black", "SUR_SHAP": "green", "V6_SUR": "blue", "V6_DYN": "red"}
     labels = {
         "LHS": "LHS", 
-        "SUR": "Space-US", 
-        "SUR_SHAP": "SHAP-US",
-        "V5": "Dynamic-US"
+        "SUR_SHAP": "SHAP-CS",
+        "V6_SUR": "IMSE-US",
+        "V6_DYN": "Dynamic-US"
     }
 
     fig, axes = plt.subplots(2, 2, figsize=(16, 10))

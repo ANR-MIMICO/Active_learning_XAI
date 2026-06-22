@@ -7,8 +7,8 @@ import glob
 def plot_paper_benchmark():
     results_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "processed", "paper_results_2"))
     
-    methods = ["LHS", "SUR", "SUR_SHAP", "V5"]
-    colors = {"LHS": "black", "SUR": "blue", "SUR_SHAP": "green", "V5": "red"}
+    methods = ["LHS", "SUR", "SUR_SHAP", "V5", "V6_SUR", "V6_DYN"]
+    colors = {"LHS": "black", "SUR": "blue", "SUR_SHAP": "green", "V5": "red", "V6_SUR": "orange", "V6_DYN": "purple"}
     labels = {
         "LHS": "Pure LHS (Baseline)", 
         "SUR": "SUR (Uncertainty only, α=0.0)", 

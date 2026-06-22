@@ -17,7 +17,7 @@ for f in files:
     
     # Adapt to Cireco context
     content = content.replace('Schelling_ABS', 'cireco')
-    content = content.replace('paper_results_2', 'paper_results')
+    content = content.replace('paper_results_2', 'paper_results_2')
     
     # Change Variable Names
     content = content.replace('["Radius", "Ratio", "Tolerance", "Grid Size", "N Groups"]', '["Price_Dispose", "Scarcity", "Density", "Cluster_Spread", "Km_Cost"]')

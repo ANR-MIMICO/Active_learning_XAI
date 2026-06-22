@@ -167,7 +167,7 @@ class ActiveLearningXAI:
             if getattr(self, 'mode', 'v4') == 'v6':
                 X_mc = self.samp(500)
                 current_imse = np.mean(sm.predict_variances(X_mc))
-                
+                X_mc = self.samp(100)
                 def compute_imse_reduction(x_cand):
                     x_cand = np.atleast_2d(x_cand)
                     y_pred = sm.predict_values(x_cand).flatten()
@@ -203,10 +203,28 @@ class ActiveLearningXAI:
 
             bounds = [(v.lower, v.upper) for v in self.design_space.design_variables]
             
-            from scipy.optimize import differential_evolution
+            from scipy.optimize import minimize
             
-            res = differential_evolution(objective, bounds=bounds, seed=42, popsize=15, maxiter=50)
-            best_x = res.x
+            # --- FAST HYBRID OPTIMIZATION ---
+            # 1. Evaluate discrete LHS grid
+            x_candidates = self.samp(100)
+            obj_vals = [objective(xc)[0] for xc in x_candidates]
+            
+            # 2. Take top 3 best points
+            top_indices = np.argsort(obj_vals)[:3]
+            best_x_starts = x_candidates[top_indices]
+            
+            # 3. Refine with L-BFGS-B (SLSQP)
+            best_obj = float('inf')
+            best_x = best_x_starts[0]
+            
+            for start_pt in best_x_starts:
+                res = minimize(objective, start_pt, method="SLSQP", bounds=bounds, options={'maxiter': 20})
+                # SciPy objective functions can sometimes return arrays
+                val = res.fun[0] if isinstance(res.fun, (np.ndarray, list)) else res.fun
+                if val < best_obj:
+                    best_obj = val
+                    best_x = res.x
                     
             # Evaluate new point
             best_x = np.atleast_2d(best_x)

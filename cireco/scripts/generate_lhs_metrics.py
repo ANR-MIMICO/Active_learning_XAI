@@ -24,7 +24,7 @@ def run_lhs_seed(seed):
         FloatVariable(0, 10),   
     ])
     
-    out_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "processed", "paper_results"))
+    out_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "processed", "paper_results_2"))
     csv_path = os.path.join(out_dir, f"LHS_seed_{seed}.csv")
     
     metrics_history = []

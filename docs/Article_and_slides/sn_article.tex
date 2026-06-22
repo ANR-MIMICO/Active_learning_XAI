@@ -128,9 +128,9 @@ Our proposed methodology relies on an iterative Bayesian active learning loop de
     
     \item \textbf{Dynamic Hybrid Bayesian Optimization (Dynamic-US):} We construct a Multi-Fidelity Gaussian Process (MFGP) using the combined datasets: $[\{x_{doe}, y_{nov\_high}\}, \{x_{xpl\_lowfi}, y_{nov\_low}\}]$[cite: 80]. Rather than purely optimizing explanatory novelty, we frame the acquisition strategy as a bi-objective optimization problem. The goal is to simultaneously maximize physical exploration (the predictive variance $\sigma^2_{GP}(x)$ in the input space) and maximize explanatory exploitation (the novelty derived from cosine distance to the historical SHAP dataset, represented by $\text{EI}_{MFK}$). We solve this using a dynamic linear scalarization that also acts as a modified Integrated Mean Squared Error (IMSE) minimization:
     \begin{equation}
-        a_{Dynamic}(x) = (1 - \alpha^{(t)}) \cdot \widetilde{\sigma}^2_{GP}(x) + \alpha^{(t)} \cdot \widetilde{\text{EI}}_{MFK}(S(x))
+        a_{Dynamic}(x) = (1 - \alpha^{(t)}) \cdot \text{IMSE}_{MC}(x) + \alpha^{(t)} \cdot \widetilde{\text{EI}}_{MFK}(S(x))
     \end{equation}
-    The parameter $\alpha^{(t)}$ smoothly sweeps the Pareto front across iterations via a dynamic schedule $\alpha^{(t)} = \alpha_{start} + (\alpha_{end} - \alpha_{start}) \frac{t}{T}$. This continuous acquisition surface is optimized globally using Differential Evolution to identify the next optimal sampling point, $x_{opt}$, blending standard uncertainty reduction with explanation-driven novelty[cite: 81].
+    where $\text{IMSE}_{MC}(x)$ represents the variance reduction measured across a discrete Monte-Carlo grid $X_{MC}$ assuming the Kriging Believer heuristic (where the model is tentatively updated with its own mean prediction at $x$). The parameter $\alpha^{(t)}$ smoothly sweeps the Pareto front across iterations via a dynamic schedule $\alpha^{(t)} = \alpha_{start} + (\alpha_{end} - \alpha_{start}) \frac{t}{T}$. This acquisition surface is optimized globally using a fast Hybrid Optimizer (Discrete LHS search followed by an SLSQP refinement) to identify the next optimal sampling point, $x_{opt}$, blending physical uncertainty reduction with explanation-driven novelty[cite: 81].
     
     \item \textbf{Update:} The expensive black-box simulator is queried at the new point $x_{opt}$ to retrieve $y_{opt}$[cite: 102]. The exact dataset is then updated ($x_{doe} := x_{doe} \cup x_{opt}$ and $y_{doe} := y_{doe} \cup y_{opt}$), and the loop repeats[cite: 103, 104].
 \end{enumerate}
@@ -171,8 +171,8 @@ Initialize iteration counter $t \leftarrow 0$\;
 
     \vspace{2mm}
     \tcp{Step 4: Dynamic Hybrid Bayesian Optimization}
-    Find the next optimal point $x_{opt}$ by maximizing the Dynamic Hybrid Acquisition function (balancing GP Variance and MFGP Expected Improvement) via Differential Evolution:\;
-    $x_{opt} = \arg\max_{x \in \mathcal{X}} \left[ (1 - \alpha^{(t)}) \cdot \widetilde{\sigma}^2_{GP}(x) + \alpha^{(t)} \cdot \widetilde{\text{EI}}_{MFK}(S(x)) \right]$\;
+    Find the next optimal point $x_{opt}$ by maximizing the Dynamic Hybrid Acquisition function (balancing Monte-Carlo IMSE and MFGP Expected Improvement) via a Discrete LHS Search refined by SLSQP:\;
+    $x_{opt} = \arg\max_{x \in \mathcal{X}} \left[ (1 - \alpha^{(t)}) \cdot \text{IMSE}_{MC}(x) + \alpha^{(t)} \cdot \widetilde{\text{EI}}_{MFK}(S(x)) \right]$\;
     
     \vspace{2mm}
     \tcp{Step 5: Update}

@@ -5,41 +5,41 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 def plot_hybrid_diff():
-    results_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "processed", "paper_results"))
+    results_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "processed", "paper_results_2"))
     
     var_names = ["Price_Dispose", "Scarcity", "Density", "Cluster", "Km_Cost"]
     
     seeds = [42, 100, 2026, 777, 12345]
     
     df_lhs_list = []
-    df_v4_list = []
+    df_v6_list = []
     for seed in seeds:
         path_lhs = os.path.join(results_dir, f"tmp_lhs_{seed}", "al_database_loop_49.csv")
         if not os.path.exists(path_lhs): path_lhs = os.path.join(results_dir, f"LHS_seed_{seed}.csv")
         
-        path_v4 = os.path.join(results_dir, f"tmp_v5_{seed}", "al_database_loop_49.csv")
-        if not os.path.exists(path_v4): path_v4 = os.path.join(results_dir, f"tmp_v5_{seed}", "al_database.csv")
+        path_v4 = os.path.join(results_dir, f"tmp_v6_dyn_{seed}", "al_database_loop_49.csv")
+        if not os.path.exists(path_v4): path_v4 = os.path.join(results_dir, f"tmp_v6_dyn_{seed}", "al_database.csv")
         
         if os.path.exists(path_lhs) and os.path.exists(path_v4):
             df_lhs_list.append(pd.read_csv(path_lhs))
-            df_v4_list.append(pd.read_csv(path_v4))
+            df_v6_list.append(pd.read_csv(path_v4))
             
-    if not df_lhs_list or not df_v4_list:
+    if not df_lhs_list or not df_v6_list:
         print("Missing data for difference plot")
         return
         
     df_lhs = pd.concat(df_lhs_list, ignore_index=True)
-    df_v4 = pd.concat(df_v4_list, ignore_index=True)
+    df_v6 = pd.concat(df_v6_list, ignore_index=True)
     
     fig, axes = plt.subplots(5, 1, figsize=(10, 15))
-    fig.suptitle('Targeted Search Profile ($\Delta$ Density: Hybrid-US minus LHS)', fontsize=16, fontweight='bold')
+    fig.suptitle('Targeted Search Profile ($\Delta$ Proportion: Dynamic-US minus LHS)', fontsize=16, fontweight='bold')
     
     for i, var_name in enumerate(var_names):
         ax = axes[i]
         
         # Custom bins for each variable
         X_lhs = df_lhs.iloc[:, i].values
-        X_v5 = df_v4.iloc[:, i].values
+        X_v5 = df_v6.iloc[:, i].values
         
         if var_name == "Price_Dispose":
             bins_to_use = np.linspace(0, 200, 11)
@@ -57,10 +57,13 @@ def plot_hybrid_diff():
             bins_to_use = np.linspace(0, 10, 11)
             xticks = np.linspace(0, 10, 6)
             
-        hist_lhs, bin_edges = np.histogram(X_lhs, bins=bins_to_use, density=True)
-        hist_v4, _ = np.histogram(X_v5, bins=bins_to_use, density=True)
+        hist_lhs, bin_edges = np.histogram(X_lhs, bins=bins_to_use, density=False)
+        hist_v6, _ = np.histogram(X_v5, bins=bins_to_use, density=False)
         
-        delta = hist_v4 - hist_lhs
+        hist_lhs = hist_lhs / len(X_lhs)
+        hist_v6 = hist_v6 / len(X_v5)
+        
+        delta = hist_v6 - hist_lhs
         bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
         bin_widths = np.diff(bin_edges)
         
@@ -71,12 +74,17 @@ def plot_hybrid_diff():
         ax.axhline(0, color='black', linewidth=1.5, linestyle='-')
         
         ax.set_title(f'Preference Profile for {var_name}', fontweight='bold')
-        ax.set_ylabel('$\Delta$ Density')
+        ax.set_ylabel('$\Delta$ Proportion')
         
         if xticks is not None:
             ax.set_xticks(xticks)
 
         ax.grid(True, axis='y', linestyle='--', alpha=0.3)
+
+    # Make Y-axis limits symmetric and identical across all subplots
+    y_max_abs = max(max(np.abs(ax.get_ylim())) for ax in axes)
+    for ax in axes:
+        ax.set_ylim(-y_max_abs, y_max_abs)
 
     plt.tight_layout(rect=[0, 0.03, 1, 0.96])
     out_img = os.path.join(results_dir, "..", "..", "figures", "analysis", "hybrid_diff_profile.png")

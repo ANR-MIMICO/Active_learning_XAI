@@ -7,7 +7,7 @@ import seaborn as sns
 from sklearn.decomposition import PCA
 
 def get_data_for_seed(seed=42):
-    results_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "processed", "paper_results"))
+    results_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "processed", "paper_results_2"))
     
     # LHS is raw csv, others are in tmp_ folders
     df_lhs = pd.read_csv(os.path.join(results_dir, f"LHS_seed_{seed}.csv"))
@@ -63,7 +63,7 @@ def plot_dual_space():
     fig, ax = plt.subplots(figsize=(10, 8))
     
     # Get the metrics CSV for the final scores
-    results_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "processed", "paper_results"))
+    results_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "processed", "paper_results_2"))
     methods = [("SUR", "blue", "Space-US"), ("V5", "red", "Dynamic-US"), ("SUR_SHAP", "green", "SHAP-US")]
     
     for m, col, label in methods:
