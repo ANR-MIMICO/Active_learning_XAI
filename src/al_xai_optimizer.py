@@ -163,8 +163,24 @@ class ActiveLearningXAI:
             # 5. Hybrid Acquisition Function with Dynamic Alpha
             x_start = self.samp(15)
             ei_samples = explicit_ei(np.atleast_2d(x_start), surro, y_min_observed)
-            var_samples = sm.predict_variances(np.atleast_2d(x_start))
-            sigma_samples = np.sqrt(np.maximum(var_samples, 1e-9))
+            
+            if getattr(self, 'mode', 'v4') == 'v6':
+                X_mc = self.samp(500)
+                current_imse = np.mean(sm.predict_variances(X_mc))
+                
+                def compute_imse_reduction(x_cand):
+                    x_cand = np.atleast_2d(x_cand)
+                    y_pred = sm.predict_values(x_cand).flatten()
+                    # Kriging Believer: Add point with predicted mean and retrain GP quickly
+                    sm_temp = KRG(theta0=sm.optimal_theta, n_start=1, print_global=False, eval_noise=True, nugget=1e-8, design_space=self.design_space)
+                    sm_temp.set_training_values(np.vstack((self.X, x_cand)), np.append(self.y, y_pred))
+                    sm_temp.train()
+                    return current_imse - np.mean(sm_temp.predict_variances(X_mc))
+                
+                sigma_samples = np.array([compute_imse_reduction(x) for x in x_start])
+            else:
+                var_samples = sm.predict_variances(np.atleast_2d(x_start))
+                sigma_samples = np.sqrt(np.maximum(var_samples, 1e-9))
             
             max_ei = np.max(ei_samples) if np.max(ei_samples) > 1e-12 else 1.0
             max_sigma = np.max(sigma_samples) if np.max(sigma_samples) > 1e-12 else 1.0
@@ -173,8 +189,12 @@ class ActiveLearningXAI:
                 if x_opt.ndim == 1:
                     x_opt = np.atleast_2d(x_opt)
                 ei = explicit_ei(x_opt, surro, y_min_observed)
-                var = sm.predict_variances(x_opt)
-                sigma = np.sqrt(np.maximum(var, 1e-9))
+                
+                if getattr(self, 'mode', 'v4') == 'v6':
+                    sigma = compute_imse_reduction(x_opt)
+                else:
+                    var = sm.predict_variances(x_opt)
+                    sigma = np.sqrt(np.maximum(var, 1e-9))
                 
                 ei_norm = ei / max_ei
                 sigma_norm = sigma / max_sigma

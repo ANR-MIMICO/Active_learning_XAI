@@ -14,7 +14,7 @@ def generate_pca_gif_for_method(results_dir, method, seed=42):
     folder = os.path.join(results_dir, f"tmp_{method}_{seed}")
     if not os.path.exists(folder): return
         
-    lhs_file = os.path.join(results_dir, f"LHS_seed_{seed}.csv")
+    lhs_file = os.path.join(results_dir, f"tmp_lhs_{seed}", "al_database_loop_0.csv")
     if not os.path.exists(lhs_file): return
         
     df_lhs = pd.read_csv(lhs_file)
@@ -24,10 +24,20 @@ def generate_pca_gif_for_method(results_dir, method, seed=42):
     pca = PCA(n_components=2)
     pca.fit(X_scaled)
     
+    # --- GET DYNAMIC BOUNDARIES FROM FINAL LOOP ---
+    final_loop = 50
+    final_csv = os.path.join(folder, f"al_database_loop_{final_loop}.csv")
+    if os.path.exists(final_csv):
+        df_final = pd.read_csv(final_csv)
+        X_final_proj = pca.transform(scaler.transform(df_final.iloc[:, :5].values))
+        x_min, x_max = X_final_proj[:, 0].min() - 1, X_final_proj[:, 0].max() + 1
+        y_min, y_max = X_final_proj[:, 1].min() - 1, X_final_proj[:, 1].max() + 1
+    else:
+        x_min, x_max = -3, 4
+        y_min, y_max = -3, 3
+
     # --- GET TRUE SIMULATOR FOR BACKGROUND CONTOUR ---
     simulator = prepare_simulator()
-    x_min, x_max = -3, 4
-    y_min, y_max = -3, 3
     xx, yy = np.meshgrid(np.linspace(x_min, x_max, 100), np.linspace(y_min, y_max, 100))
     grid_2d = np.c_[xx.ravel(), yy.ravel()]
     grid_5d_scaled = pca.inverse_transform(grid_2d)
@@ -56,14 +66,14 @@ def generate_pca_gif_for_method(results_dir, method, seed=42):
         plt.title(f"PCA Projection - {method_title} Evolution (Loop {loop})", fontsize=16, fontweight='bold')
         
         # Plot background contour
-        plt.contourf(xx, yy, Z, levels=20, cmap='viridis', alpha=0.4)
-        plt.contour(xx, yy, Z, levels=[70], colors='black', linewidths=2, linestyles='--')
+        plt.contourf(xx, yy, Z, levels=20, cmap='viridis', alpha=0.4, zorder=1)
+        plt.contour(xx, yy, Z, levels=[70], colors='black', linewidths=2, linestyles='--', zorder=2)
         
-        plt.scatter(X_proj[:30, 0], X_proj[:30, 1], c='grey', alpha=0.6, label='Initial DoE (30 pts)', s=50, edgecolors='white')
+        plt.scatter(X_proj[:30, 0], X_proj[:30, 1], c='grey', alpha=0.6, label='Initial DoE (30 pts)', s=50, edgecolors='white', zorder=10)
         
         if len(X_proj) > 30:
             plt.scatter(X_proj[30:, 0], X_proj[30:, 1], c=main_color, alpha=0.9, 
-                        label=f'Active Learning ({len(X_proj)-30} pts)', s=100, edgecolors='black')
+                        label=f'Active Learning ({len(X_proj)-30} pts)', s=100, edgecolors='black', zorder=11)
         
         plt.xlim(x_min, x_max)
         plt.ylim(y_min, y_max)

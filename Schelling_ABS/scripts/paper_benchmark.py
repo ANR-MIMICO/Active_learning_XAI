@@ -132,13 +132,28 @@ def run_seed_task(args):
         al.run(output_dir=os.path.join(out_dir, f"tmp_v5_{seed}"))
         # Move the CSV
         os.rename(os.path.join(out_dir, f"tmp_v5_{seed}", "al_metrics_history.csv"), csv_path)
+        
+    elif method == "V6_SUR":
+        # IMSE-based Pure Physical Exploration
+        al = ActiveLearningXAI(simulator, design_space, x_initial, y_initial, alpha_start=0.0, alpha_end=0.0, total_loops=50, mode='v6')
+        al.run(output_dir=os.path.join(out_dir, f"tmp_v6_sur_{seed}"))
+        # Move the CSV
+        os.rename(os.path.join(out_dir, f"tmp_v6_sur_{seed}", "al_metrics_history.csv"), csv_path)
+        
+    elif method == "V6_Dynamic":
+        # IMSE-based Dynamic Annealing
+        al = ActiveLearningXAI(simulator, design_space, x_initial, y_initial, alpha_start=0.0, alpha_end=1.0, total_loops=50, mode='v6')
+        al.run(output_dir=os.path.join(out_dir, f"tmp_v6_dyn_{seed}"))
+        # Move the CSV
+        os.rename(os.path.join(out_dir, f"tmp_v6_dyn_{seed}", "al_metrics_history.csv"), csv_path)
 
     print(f"--- FINISHED: {method} - Seed {seed} ---")
     return True
 
 if __name__ == '__main__':
     seeds = [42, 100, 2026, 777, 12345]
-    methods = ["SUR", "V5", "SUR_SHAP"] # Run the 3 AL methods
+    # We only run the new V6 methods since V5 and SUR were already computed
+    methods = ["V6_SUR", "V6_Dynamic"] 
     
     tasks = []
     for m in methods:
