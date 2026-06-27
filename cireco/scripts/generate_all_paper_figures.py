@@ -20,6 +20,8 @@ if __name__ == "__main__":
         "plot_pca_metrics.py",            # 4. Static PCA 1x4 Grid
         "plot_1d_histograms.py",          # 5. 1D Histograms per Variable
         "plot_hybrid_diff_histograms.py", # 5.5 Hybrid Diff Histograms
+        "generate_cireco_postprocs.py",   # 5.6 PDP/ICE and Target Distributions
+        "plot_pca_shap.py",               # 5.7 SHAP Space Global PCA
         "generate_pca_gif.py"             # 6. PCA Real-Time Evolution GIFs
     ]
     

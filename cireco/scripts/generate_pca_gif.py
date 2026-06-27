@@ -49,9 +49,9 @@ def generate_pca_gif_for_method(results_dir, method, seed=42):
     tmp_dir = os.path.join(folder, "gif_frames")
     os.makedirs(tmp_dir, exist_ok=True)
     
-    titles = {'lhs': 'LHS', 'sur': 'Space-US', 'sur_shap': 'SHAP-US', 'v5': 'Dynamic-US'}
+    titles = {'lhs': 'LHS', 'v6_sur': 'IMSE-US', 'sur_shap': 'SHAP-CS', 'v6_dyn': 'Dynamic-US'}
     method_title = titles.get(method.lower(), method.upper())
-    color_map = {'lhs': 'black', 'sur': 'blue', 'sur_shap': 'green', 'v5': 'red'}
+    color_map = {'lhs': 'black', 'v6_sur': 'blue', 'sur_shap': 'green', 'v6_dyn': 'red'}
     main_color = color_map.get(method.lower(), 'red')
 
     for loop in range(51):

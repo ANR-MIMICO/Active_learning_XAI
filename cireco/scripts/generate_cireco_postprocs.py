@@ -9,10 +9,10 @@ from sklearn.decomposition import PCA
 def get_data_for_seed(seed=42):
     results_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "processed", "paper_results_2"))
     
-    # LHS is raw csv, others are in tmp_ folders
-    df_lhs = pd.read_csv(os.path.join(results_dir, f"LHS_seed_{seed}.csv"))
-    df_sur = pd.read_csv(os.path.join(results_dir, f"tmp_sur_{seed}", "al_database_loop_49.csv"))
-    df_v5 = pd.read_csv(os.path.join(results_dir, f"tmp_v5_{seed}", "al_database_loop_49.csv"))
+    # Load physical databases from their respective tmp_ folders
+    df_lhs = pd.read_csv(os.path.join(results_dir, f"tmp_lhs_{seed}", "al_database_loop_49.csv"))
+    df_sur = pd.read_csv(os.path.join(results_dir, f"tmp_v6_sur_{seed}", "al_database_loop_49.csv"))
+    df_v5 = pd.read_csv(os.path.join(results_dir, f"tmp_v6_dyn_{seed}", "al_database_loop_49.csv"))
     df_sur_shap = pd.read_csv(os.path.join(results_dir, f"tmp_sur_shap_{seed}", "al_database_loop_49.csv"))
     
     return df_lhs, df_sur, df_sur_shap, df_v5
@@ -30,9 +30,9 @@ def plot_target_distribution():
     prices_shap = df_sur_shap['Target'].values[30:]
     
     sns.kdeplot(prices_lhs, label="LHS (Uniform)", color="black", lw=2, fill=True, alpha=0.1, ax=ax)
-    sns.kdeplot(prices_sur, label="Space-US", color="blue", lw=2, fill=True, alpha=0.1, ax=ax)
+    sns.kdeplot(prices_sur, label="IMSE-US", color="blue", lw=2, fill=True, alpha=0.1, ax=ax)
     sns.kdeplot(prices_v5, label="Dynamic-US", color="red", lw=2, fill=True, alpha=0.1, ax=ax)
-    sns.kdeplot(prices_shap, label="SHAP-US", color="green", lw=2, fill=True, alpha=0.1, ax=ax)
+    sns.kdeplot(prices_shap, label="SHAP-CS", color="green", lw=2, fill=True, alpha=0.1, ax=ax)
     
     ax.set_title("Distribution of Explored Targets (Price)", fontsize=16, fontweight='bold')
     ax.set_xlabel("Price", fontsize=14)
@@ -64,7 +64,7 @@ def plot_dual_space():
     
     # Get the metrics CSV for the final scores
     results_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "processed", "paper_results_2"))
-    methods = [("SUR", "blue", "Space-US"), ("V5", "red", "Dynamic-US"), ("SUR_SHAP", "green", "SHAP-US")]
+    methods = [("V6_SUR", "blue", "IMSE-US"), ("V6_Dynamic", "red", "Dynamic-US"), ("SUR_SHAP", "green", "SHAP-CS")]
     
     for m, col, label in methods:
         f = os.path.join(results_dir, f"{m}_seed_42.csv")

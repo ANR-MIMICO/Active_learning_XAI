@@ -7,13 +7,13 @@ import matplotlib.pyplot as plt
 def plot_dual_space():
     results_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "processed", "paper_results_2"))
     
-    methods = ["LHS", "SUR_SHAP", "V6_SUR", "V6_DYN"]
-    colors = {"LHS": "black", "SUR_SHAP": "green", "V6_SUR": "blue", "V6_DYN": "red"}
+    methods = ["LHS", "SUR_SHAP", "V6_SUR", "V6_Dynamic"]
+    colors = {"LHS": "black", "SUR_SHAP": "green", "V6_SUR": "blue", "V6_Dynamic": "red"}
     labels = {
         "LHS": "LHS", 
-        "SUR_SHAP": "SHAP-US",
+        "SUR_SHAP": "SHAP-CS",
         "V6_SUR": "IMSE-US",
-        "V6_DYN": "Dynamic-US"
+        "V6_Dynamic": "Dynamic-US"
     }
 
     plt.figure(figsize=(10, 8))
@@ -32,7 +32,7 @@ def plot_dual_space():
             df_list_in.append(df['Entropy_Input'])
             df_list_sh.append(df['Entropy_SHAP'])
             
-        cmap_dict = {"LHS": "Greys", "SUR_SHAP": "Greens", "V6_SUR": "Blues", "V6_DYN": "Reds"}
+        cmap_dict = {"LHS": "Greys", "SUR_SHAP": "Greens", "V6_SUR": "Blues", "V6_Dynamic": "Reds"}
         
         # Invisible scatter for the legend
         plt.scatter([], [], color=colors[m], label=labels[m], s=60)

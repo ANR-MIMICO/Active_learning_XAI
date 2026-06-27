@@ -96,25 +96,20 @@ def run_seed_task(args):
         al.run(output_dir=os.path.join(out_dir, f"tmp_sur_{seed}"))
         os.rename(os.path.join(out_dir, f"tmp_sur_{seed}", "al_metrics_history.csv"), csv_path)
         
-    elif method == "SUR_SHAP":
-        al = ActiveLearningXAI(simulator, design_space, x_initial, y_initial, alpha_start=1.0, alpha_end=1.0, total_loops=50, mode='v4')
-        al.run(output_dir=os.path.join(out_dir, f"tmp_sur_shap_{seed}"))
-        os.rename(os.path.join(out_dir, f"tmp_sur_shap_{seed}", "al_metrics_history.csv"), csv_path)
-        
-    elif method == "V5":
-        al = ActiveLearningXAI(simulator, design_space, x_initial, y_initial, alpha_start=0.0, alpha_end=1.0, total_loops=50, mode='v4')
-        al.run(output_dir=os.path.join(out_dir, f"tmp_v5_{seed}"))
-        os.rename(os.path.join(out_dir, f"tmp_v5_{seed}", "al_metrics_history.csv"), csv_path)
-
     elif method == "V6_SUR":
         al = ActiveLearningXAI(simulator, design_space, x_initial, y_initial, alpha_start=0.0, alpha_end=0.0, total_loops=50, mode='v6')
         al.run(output_dir=os.path.join(out_dir, f"tmp_v6_sur_{seed}"))
-        os.rename(os.path.join(out_dir, f"tmp_v6_sur_{seed}", "al_metrics_history.csv"), csv_path)
+        os.replace(os.path.join(out_dir, f"tmp_v6_sur_{seed}", "al_metrics_history.csv"), csv_path)
         
-    elif method == "V6_DYN":
-        al = ActiveLearningXAI(simulator, design_space, x_initial, y_initial, alpha_start=0.0, alpha_end=1.0, total_loops=50, mode='v6')
+    elif method == "SUR_SHAP":
+        al = ActiveLearningXAI(simulator, design_space, x_initial, y_initial, alpha_start=1.0, alpha_end=1.0, total_loops=50, mode='v6')
+        al.run(output_dir=os.path.join(out_dir, f"tmp_sur_shap_{seed}"))
+        os.replace(os.path.join(out_dir, f"tmp_sur_shap_{seed}", "al_metrics_history.csv"), csv_path)
+        
+    elif method == "V6_Dynamic":
+        al = ActiveLearningXAI(simulator, design_space, x_initial, y_initial, alpha_start=0.01, alpha_end=0.90, total_loops=50, mode='v6')
         al.run(output_dir=os.path.join(out_dir, f"tmp_v6_dyn_{seed}"))
-        os.rename(os.path.join(out_dir, f"tmp_v6_dyn_{seed}", "al_metrics_history.csv"), csv_path)
+        os.replace(os.path.join(out_dir, f"tmp_v6_dyn_{seed}", "al_metrics_history.csv"), csv_path)
 
     print(f"--- FINISHED: {method} - Seed {seed} ---")
     return True
@@ -122,13 +117,13 @@ def run_seed_task(args):
 if __name__ == '__main__':
     # First run LHS sequentially to generate the base 30 points
     seeds = [42, 100, 2026, 777, 12345]
-    print("Generating LHS baselines...")
-    for s in seeds:
-        run_seed_task((s, "LHS"))
+    print("Using pre-existing LHS baselines from paper_results...")
+    # for s in seeds:
+    #     run_seed_task((s, "LHS"))
         
     print("Launching AL algorithms in parallel...")
-    # We only run the new V6 methods since V5 and SUR are outdated
-    methods = ["V6_SUR", "V6_DYN"]
+    # We run strictly SUR_SHAP natively to use Differential Evolution
+    methods = ["SUR_SHAP"]
     
     tasks = []
     for m in methods:

@@ -33,9 +33,9 @@ def plot_boundary():
     mlp, scaler = get_simulator()
     results_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "processed", "paper_results_2"))
     
-    methods = ["LHS", "SUR_SHAP", "V6_SUR", "V6_DYN"]
-    colors = {"LHS": "black", "SUR_SHAP": "green", "V6_SUR": "blue", "V6_DYN": "red"}
-    labels = {"LHS": "LHS", "SUR_SHAP": "SHAP-CS", "V6_SUR": "IMSE-US", "V6_DYN": "Dynamic-US"}
+    methods = ["LHS", "SUR_SHAP", "V6_SUR", "V6_Dynamic"]
+    colors = {"LHS": "black", "SUR_SHAP": "green", "V6_SUR": "blue", "V6_Dynamic": "red"}
+    labels = {"LHS": "LHS", "SUR_SHAP": "SHAP-CS", "V6_SUR": "IMSE-US", "V6_Dynamic": "Dynamic-US"}
     
     plt.figure(figsize=(10, 6))
     
@@ -43,13 +43,14 @@ def plot_boundary():
         # Load all points sampled by method m across all seeds
         # Actually the CSVs only save metrics, not the points themselves!
         # Wait... al_metrics_history.csv doesn't save X! We must load the al_database.csv
-        csv_files = glob.glob(os.path.join(results_dir, f"tmp_{m.lower()}_*", "al_database.csv"))
+        # Map the formal method name back to its folder prefix
+        folder_prefix = m.lower()
+        if m == "V6_Dynamic":
+            folder_prefix = "v6_dyn"
         
-        # If the folders were renamed, we need to adapt. Since we renamed the CSVs and deleted the folders, we lost the points!
-        # Wait, in paper_benchmark, I only renamed the CSV and left the folders `tmp_v5_seed` intact?
-        csv_files = glob.glob(os.path.join(results_dir, f"tmp_{m.lower()}_*", "al_database.csv"))
+        csv_files = glob.glob(os.path.join(results_dir, f"tmp_{folder_prefix}_*", "al_database.csv"))
         if len(csv_files) == 0:
-            csv_files = glob.glob(os.path.join(results_dir, f"tmp_{m.lower()}_*", "al_database_loop_49.csv"))
+            csv_files = glob.glob(os.path.join(results_dir, f"tmp_{folder_prefix}_*", "al_database_loop_49.csv"))
             
         all_probs = []
         for db_path in csv_files:

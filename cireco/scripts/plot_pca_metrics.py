@@ -52,9 +52,9 @@ def plot_pca():
     Z = Z.reshape(xx.shape)
     
     methods = [("lhs", "LHS"), 
-               ("sur", "Space-US"), 
-               ("sur_shap", "SHAP-US"), 
-               ("v5", "Dynamic-US")]
+               ("v6_sur", "IMSE-US"), 
+               ("sur_shap", "SHAP-CS"), 
+               ("v6_dyn", "Dynamic-US")]
                
     seeds = [42, 100, 2026, 777, 12345]
     seed_colors = ['magenta', 'cyan', 'lime', 'orange', 'purple']

@@ -73,7 +73,7 @@ def run_seed_task(args):
     if os.path.exists(lhs_csv):
         df_init = pd.read_csv(lhs_csv)
         x_initial = df_init.iloc[:, :5].values
-        y_initial = df_init["Target"].values
+        y_initial = df_init["y"].values
     else:
         # Fallback (shouldn't happen if LHS was run)
         samp = LHS(xlimits=design_space.get_num_bounds(), criterion="ese")
@@ -83,10 +83,12 @@ def run_seed_task(args):
         y_initial = simulator(x_initial)
     
     if method == "LHS":
-        # Pure LHS from 30 to 80 points
+        # Pure LHS baseline (80 points)
+        samp = LHS(xlimits=design_space.get_num_bounds(), criterion="ese")
         x_full = samp(80)
         for i, var in enumerate(design_space.design_variables):
             if isinstance(var, IntegerVariable): x_full[:, i] = np.round(x_full[:, i])
+        
         y_full = simulator(x_full)
         
         with open(csv_path, 'w') as f:
@@ -105,47 +107,23 @@ def run_seed_task(args):
             with open(csv_path, 'a') as f:
                 f.write(f"{n-30},{n},{ent_x:.4f},{cv_x:.4f},{ent_s:.4f},{cv_s:.4f}\n")
                 
-    elif method == "SUR":
-        # Alpha fixed at 0.0
-        al = ActiveLearningXAI(simulator, design_space, x_initial, y_initial, alpha_start=0.0, alpha_end=0.0, total_loops=50, mode='v4')
-        al.run(output_dir=os.path.join(out_dir, f"tmp_sur_{seed}"))
-        # Move the CSV
-        os.rename(os.path.join(out_dir, f"tmp_sur_{seed}", "al_metrics_history.csv"), csv_path)
-        
-    elif method == "V4":
-        # Alpha fixed at 0.5 (perfectly balanced and normalized)
-        al = ActiveLearningXAI(simulator, design_space, x_initial, y_initial, alpha_start=0.5, alpha_end=0.5, total_loops=50, mode='v4')
-        al.run(output_dir=os.path.join(out_dir, f"tmp_v4_{seed}"))
-        # Move the CSV
-        os.rename(os.path.join(out_dir, f"tmp_v4_{seed}", "al_metrics_history.csv"), csv_path)
-        
-    elif method == "SUR_SHAP":
-        # Alpha fixed at 1.0 (Pure XAI Novelty, ignore physical uncertainty)
-        al = ActiveLearningXAI(simulator, design_space, x_initial, y_initial, alpha_start=1.0, alpha_end=1.0, total_loops=50, mode='v4')
-        al.run(output_dir=os.path.join(out_dir, f"tmp_sur_shap_{seed}"))
-        # Move the CSV
-        os.rename(os.path.join(out_dir, f"tmp_sur_shap_{seed}", "al_metrics_history.csv"), csv_path)
-        
-    elif method == "V5":
-        # Dynamic Annealing: Starts at 0.0 (Space-US) and ends at 1.0 (SHAP-US)
-        al = ActiveLearningXAI(simulator, design_space, x_initial, y_initial, alpha_start=0.0, alpha_end=1.0, total_loops=50, mode='v4')
-        al.run(output_dir=os.path.join(out_dir, f"tmp_v5_{seed}"))
-        # Move the CSV
-        os.rename(os.path.join(out_dir, f"tmp_v5_{seed}", "al_metrics_history.csv"), csv_path)
-        
     elif method == "V6_SUR":
-        # IMSE-based Pure Physical Exploration
+        # IMSE-US: Pure physical exploration (alpha=0.0)
         al = ActiveLearningXAI(simulator, design_space, x_initial, y_initial, alpha_start=0.0, alpha_end=0.0, total_loops=50, mode='v6')
         al.run(output_dir=os.path.join(out_dir, f"tmp_v6_sur_{seed}"))
-        # Move the CSV
-        os.rename(os.path.join(out_dir, f"tmp_v6_sur_{seed}", "al_metrics_history.csv"), csv_path)
+        os.replace(os.path.join(out_dir, f"tmp_v6_sur_{seed}", "al_metrics_history.csv"), csv_path)
+        
+    elif method == "SUR_SHAP":
+        # SHAP-US: Pure explanatory exploration (alpha=1.0)
+        al = ActiveLearningXAI(simulator, design_space, x_initial, y_initial, alpha_start=1.0, alpha_end=1.0, total_loops=50, mode='v6')
+        al.run(output_dir=os.path.join(out_dir, f"tmp_sur_shap_{seed}"))
+        os.replace(os.path.join(out_dir, f"tmp_sur_shap_{seed}", "al_metrics_history.csv"), csv_path)
         
     elif method == "V6_Dynamic":
-        # IMSE-based Dynamic Annealing
-        al = ActiveLearningXAI(simulator, design_space, x_initial, y_initial, alpha_start=0.0, alpha_end=1.0, total_loops=50, mode='v6')
+        # Dynamic-US: Adaptive alpha (0.01 to 0.90)
+        al = ActiveLearningXAI(simulator, design_space, x_initial, y_initial, alpha_start=0.01, alpha_end=0.90, total_loops=50, mode='v6')
         al.run(output_dir=os.path.join(out_dir, f"tmp_v6_dyn_{seed}"))
-        # Move the CSV
-        os.rename(os.path.join(out_dir, f"tmp_v6_dyn_{seed}", "al_metrics_history.csv"), csv_path)
+        os.replace(os.path.join(out_dir, f"tmp_v6_dyn_{seed}", "al_metrics_history.csv"), csv_path)
 
     print(f"--- FINISHED: {method} - Seed {seed} ---")
     return True
@@ -153,7 +131,7 @@ def run_seed_task(args):
 if __name__ == '__main__':
     seeds = [42, 100, 2026, 777, 12345]
     # We only run the new V6 methods since V5 and SUR were already computed
-    methods = ["V6_SUR", "V6_Dynamic"] 
+    methods = ["SUR_SHAP"] 
     
     tasks = []
     for m in methods:
@@ -161,8 +139,8 @@ if __name__ == '__main__':
             tasks.append((s, m))
             
     print(f"Launching {len(tasks)} tasks in parallel...")
-    # Use CPU count minus 1 to not freeze the computer
-    n_cores = max(1, mp.cpu_count() - 1)
+    # Using exactly 5 threads to run all 5 seeds simultaneously as requested
+    n_cores = 5
     with mp.Pool(processes=n_cores) as pool:
         pool.map(run_seed_task, tasks)
         

@@ -14,8 +14,8 @@ def plot_pca_shap():
     results_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "processed", "paper_results_2"))
     
     methods = [("tmp_lhs_42", "LHS"), 
-               ("tmp_sur_shap_42", "SHAP-CS"), 
                ("tmp_v6_sur_42", "IMSE-US"),
+               ("tmp_sur_shap_42", "SHAP-US"), 
                ("tmp_v6_dyn_42", "Dynamic-US")]
                
     design_space = DesignSpace([

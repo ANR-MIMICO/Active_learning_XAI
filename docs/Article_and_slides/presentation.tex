@@ -37,6 +37,19 @@
   \end{itemize}
 \end{frame}
 
+\begin{frame}[fragile]{Redefining Tipping Points in Complex Systems}
+  \textbf{From Dynamical Systems to Active Learning:}
+  \begin{itemize}
+      \item \textbf{The Classical View:} In dynamical systems, a tipping point is a mathematical discontinuity (e.g., bifurcations, systems moving out-of-equilibria) where the state derivative approaches infinity: $\lim_{\Delta x \to 0} \frac{\Delta y}{\Delta x} = \infty$.
+      \item \textbf{The Intractability:} Proving a true analytical discontinuity is impossible from finite samples in a stochastic, derivative-free, black-box ABM.
+      \item \textbf{The Lipschitz Relaxation:} We mathematically relax this constraint. Instead of seeking an infinite gradient, we define a generalized tipping point as a localized region (a ball $\mathcal{B}$) exhibiting an exceptionally high \textbf{Lipschitz constant} (extreme finite-difference variations).
+      \item \textbf{The Consequence:} Rather than solving differential equations, we locate these out-of-equilibria phase transitions by hunting for regions where the model's \textit{causal logic} (its SHAP explanations) undergoes abrupt, massive shifts.
+  \end{itemize}
+  
+  \vspace{0.3cm}
+  \footnotesize{\textit{Classical Reference: Scheffer, M., et al. (2009). Early-warning signals for critical transitions. Nature, 461(7260), 53-59.}}
+\end{frame}
+
 \begin{frame}[fragile]{Motivation: Tipping Points in Dual Spaces}
   \textbf{Goal:} Identify critical phase transitions in both the physical and explanatory domains.
   
@@ -73,6 +86,38 @@
   \textbf{The Goal:} Explicitly sample regions where the internal logic (the explanation) of the model fundamentally changes.
 \end{frame}
 
+\begin{frame}[fragile]{Constructing the Dual Explanatory Space (SHAP)}
+  \textbf{Mapping from Physical to Causal Space:}
+  To construct this dual space, we apply cooperative game theory (Shapley Values) to the physical features predicting the model output $f(x)$.
+  
+  \begin{itemize}
+      \item \textbf{The Value Function $v(S)$:} For any feature coalition $S \subseteq M$, the value function is the conditional expectation:
+      $$ v(S) = \mathbb{E}\big[f(X) \mid X_S = x_S\big] $$
+      \item \textbf{The Local Payout:} The SHAP values $\phi_i(x)$ distribute the exact difference between the local prediction and the global average:
+      $$ \sum_{i=1}^M \phi_i(x) = f(x) - \mathbb{E}[f(X)] $$
+      \item \textbf{The Dual Mapping:} Each physical point $x \in \mathbb{R}^M$ is mapped to its local explanatory profile $S(x) \in \mathbb{R}^M$:
+      $$ S(x) = \big[\phi_1(x), \dots, \phi_M(x)\big] $$
+  \end{itemize}
+  \textit{This new continuous manifold captures \textbf{why} the model acts, rather than just \textbf{what} it outputs.}
+\end{frame}
+
+\begin{frame}[fragile]{Formalizing the DFO Goal: The Primal Bi-Objective Problem}
+  Our exploration strategy can be mathematically cast as a bi-objective Derivative-Free Optimization (DFO) problem over the sampling density $\rho(x)$:
+  
+  \begin{itemize}
+      \item \textbf{Objective 1 (Global Discrepancy):} 
+      $$ \min_{x} \rho(x | X) $$
+      We seek to maximize space-filling discrepancy to avoid pathological density peaks in the input space (preventing model collapse in homogeneous regions).
+      
+      \item \textbf{Objective 2 (Targeted Tipping Point Exploitation):} 
+      $$ \max_{x} \rho\Big(x \;\big|\; x \in \mathcal{B}(x_{tp}, r), X\Big) $$
+      Simultaneously, we must locally maximize sampling density within a radius $r$ around the tipping points $x_{tp}$ (where explanatory SHAP profiles shift abruptly).
+  \end{itemize}
+  
+  \vspace{0.3cm}
+  \textbf{The Challenge:} Solving this directly is intractable. Our proposed pipeline acts as a surrogate scalarization of this bi-objective primal problem.
+\end{frame}
+
 \section{Pipeline \& Innovations}
 
 \begin{frame}[fragile]{The Active Learning Pipeline Architecture}
@@ -81,6 +126,22 @@
       \includegraphics[width=0.9\textwidth, height=0.75\textheight, keepaspectratio]{Images/pipeline.png}
       \caption{Flowchart of the Proposed Active Learning Framework}
   \end{figure}
+\end{frame}
+
+\begin{frame}[fragile]{0. Pre-Processing: Handling ABM Stochasticity}
+  \textbf{Removing Aleatoric Uncertainty via Statistical Power Analysis:}
+  Agent-Based Models (like those in GAMA) are inherently stochastic. To construct a reliable deterministic surrogate model (Kriging) for Active Learning, we must first "remove" this noise by accurately estimating the true mean response $\hat{y}$ at any sampled point $x$.
+  
+  \begin{itemize}
+      \item \textbf{The Challenge:} How many replications $R$ are required to confidently estimate the mean response without wasting computational budget?
+      \item \textbf{The GAMA Solution:} We utilize GAMA's built-in stochastic analysis module, which dynamically executes replications $R$ until the variance of the mean stabilizes.
+      \item \textbf{The Stopping Criterion:} This stabilization is verified online using an \textbf{F-test (Fisher test)} over the running variance, ensuring sufficient statistical power and minimizing Type-II false negatives.
+  \end{itemize}
+  
+  \vspace{0.3cm}
+  \footnotesize{\textit{References: \\
+  (1) Secchi, D., \& Seri, R. (2017). Controlling for false negatives in agent-based models: a review of power analysis in organizational research. CMOT. \\
+  (2) Lorscheid, I., Heine, B. O., \& Meyer, M. (2012). Opening the “black box” of simulations: increased transparency and effective communication through the systematic design of experiments. CMOT, 18(1), 22-62.}}
 \end{frame}
 
 \begin{frame}[fragile]{1. Dual-Surrogates \& SHAP Data Augmentation}
@@ -101,17 +162,65 @@
   \end{itemize}
 \end{frame}
 
-\begin{frame}[fragile]{3. Dynamic Hybrid Acquisition (EI \& $\alpha$)}
+\begin{frame}[fragile]{3. From Non-Informed Variance to Stepwise Uncertainty Reduction}
+  \textbf{Rethinking Physical Exploration:}
+  \begin{itemize}
+      \item \textbf{The Pointwise Flaw:} Standard Bayesian Optimization relies on isolated predictive variance $\sigma^2_{GP}(x)$. This greedily targets model boundaries but ignores the global impact of adding a new sample.
+      \item \textbf{Integrated Mean Squared Error (IMSE):} Instead of exploring blindly, we compute the expected global variance reduction across a dense Monte-Carlo grid ($X_{MC}$).
+      \item \textbf{The Kriging Believer Heuristic:} To evaluate a candidate $x$, we tentatively update the Surrogate Model with its own mean prediction at $x$. We then measure how much this hypothetical update collapses the uncertainty across the entire physical space.
+      \item \textbf{The Result:} A highly robust Stepwise Uncertainty Reduction (SUR) strategy (Picheny et al.) that flawlessly secures the physical boundaries before the algorithm shifts its focus toward explanatory novelty.
+  \end{itemize}
+\end{frame}
+
+
+\begin{frame}[fragile]{5. Dynamic Hybrid Acquisition (EI \& $\alpha$)}
   \textbf{Closing the Active Learning Loop:}
   \begin{itemize}
       \item \textbf{Multi-Fidelity Kriging (MFK):} A second surrogate is trained strictly on the computed Cosine Novelties to map the topography of the explanatory space.
       \item \textbf{Expected Improvement:} The MFK provides both a novelty prediction and its uncertainty, allowing us to compute $\text{EI}_{MFK}$ (the potential for discovering a highly novel explanation).
       \item \textbf{Dynamic Scalarization ($\alpha$):} We dynamically sweep a Pareto front between spatial uncertainty ($\sigma_{GP}$) and explanatory novelty ($\text{EI}_{MFK}$):
   \end{itemize}
-  $$a_{Dynamic}(x) = (1 - \alpha^{(t)}) \cdot \widetilde{\sigma}^2_{GP}(x) + \alpha^{(t)} \cdot \widetilde{\text{EI}}_{MFK}(S(x))$$
+  $$a_{Dynamic}(x) = (1 - \alpha^{(t)}) \cdot \frac{\Delta\text{IMSE}_{MC}(x)}{\max(\Delta\text{IMSE})} + \alpha^{(t)} \cdot \frac{\widetilde{\text{EI}}_{MFK}(S(x))}{\max(\widetilde{\text{EI}})}$$
 \end{frame}
 
 \section{Results \& Analysis}
+
+\begin{frame}[fragile]{The Baseline: LHS-ESE (Jin et al.)}
+  \textbf{Establishing a Rigorous Space-Filling Standard:}
+  We compare our approach against the gold-standard static DoE: Latin Hypercube Sampling optimized via Enhanced Stochastic Evolutionary (LHS-ESE).
+  
+  \vspace{0.2cm}
+  \textbf{Formulated as a Constrained Optimization Problem:}
+  $$ \min_{X \in \mathbb{R}^{N \times M}} \Phi_p(X) = \left( \sum_{i=1}^{N-1} \sum_{j=i+1}^N d(x_i, x_j)^{-p} \right)^{\frac{1}{p}} $$
+  $$ \textbf{s.t.} \quad X \text{ satisfies the univariate Latin Hypercube constraint.} $$
+  
+  \begin{itemize}
+      \item \textbf{The Objective (Morris \& Mitchell):} We simply minimize the \textbf{Minkowski norm ($L_p$) of the inverse of the Euclidean distances in the search space} ($\Phi_p$). As $p \to \infty$, this mathematically converges to maximizing the minimum distance (the Maximin criterion).
+      \item \textbf{The Solver (Jin et al.):} The discrete combinatorial space of LHS is explored and optimized using the Enhanced Stochastic Evolutionary (ESE) algorithm, a powerful \textbf{Derivative-Free Optimization (DFO)} metaheuristic.
+      \item \textbf{Iterative Evaluation:} Our baseline re-solves this constrained problem from scratch at \textit{every step} (from $N=30$ to $N=80$). This guarantees the absolute mathematical limit of static physical space-filling.
+  \end{itemize}
+  
+  \vspace{0.3cm}
+  \footnotesize{\textit{Reference: Jin, R., Chen, W., \& Sudjianto, A. (2005). An efficient algorithm for constructing optimal design of computer experiments. Journal of Statistical Planning and Inference, 134(1), 268-287.}}
+\end{frame}
+
+\begin{frame}[fragile]{Experimental Setup}
+  \textbf{Benchmark Configuration:}
+  \begin{itemize}
+      \item \textbf{Initial Design of Experiments (DoE):} All methods share an identical starting point consisting of a 30-point Latin Hypercube Sample optimized via Enhanced Stochastic Evolutionary (LHS-ESE).
+      \item \textbf{Acquisition Strategies Evaluated:}
+      \begin{itemize}
+          \item \textbf{IMSE-US ($\alpha = 0$):} Pure physical uncertainty reduction.
+          \item \textbf{SHAP-US ($\alpha = 1$):} Pure explanatory novelty search.
+          \item \textbf{Dynamic-US ($\alpha \in [0.01, 0.90]$):} Our proposed hybrid method, transitioning smoothly from physical to explanatory exploration.
+      \end{itemize}
+      \item \textbf{Internal Optimizer:} The highly non-convex, derivative-free acquisition function ($a_{Dynamic}$) is globally maximized at each step using the \textbf{Differential Evolution} algorithm.
+      \item \textbf{Computational Budget:} 50 Active Learning iterations (from $N=30$ to $N=80$ total points).
+      \item \textbf{Baseline (LHS):} A pure LHS-ESE baseline evaluated iteratively. Crucially, each LHS size (e.g., $N=30, 31, \dots, 80$) is generated as an independent, fully re-optimized projection to guarantee maximum space-filling efficiency at every step.
+      \item \textbf{Evaluation Metrics:} Diversity is quantified using Shannon Entropy. For a given space (Physical or Explanatory), we compute 1D histograms (10 bins) for each variable, calculate their independent entropies, and report the normalized average across all dimensions.
+      \item \textbf{Reproducibility:} All algorithms and baselines were rigorously evaluated across 5 independent replicates (different random seeds) to ensure statistical validity.
+  \end{itemize}
+\end{frame}
 
 \begin{frame}[fragile]{Hunting Tipping Points in PCA Space}
   \begin{columns}

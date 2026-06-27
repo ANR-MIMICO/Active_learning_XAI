@@ -68,7 +68,7 @@ def explicit_ei(x, sm, y_min):
     return ei
 
 class ActiveLearningXAI:
-    def __init__(self, simulator_func, design_space, x_initial, y_initial, alpha_start=0.0, alpha_end=1.0, total_loops=50, mode='v4'):
+    def __init__(self, simulator_func, design_space, x_initial, y_initial, alpha_start=0.01, alpha_end=0.90, total_loops=50, mode='v6'):
         self.simulator_func = simulator_func
         self.design_space = design_space
         self.X = np.array(x_initial)
@@ -164,14 +164,15 @@ class ActiveLearningXAI:
             x_start = self.samp(15)
             ei_samples = explicit_ei(np.atleast_2d(x_start), surro, y_min_observed)
             
-            if getattr(self, 'mode', 'v4') == 'v6':
+            if alpha == 1.0:
+                sigma_samples = np.zeros(len(x_start))
+            elif getattr(self, 'mode', 'v4') == 'v6':
                 X_mc = self.samp(500)
                 current_imse = np.mean(sm.predict_variances(X_mc))
                 X_mc = self.samp(100)
                 def compute_imse_reduction(x_cand):
                     x_cand = np.atleast_2d(x_cand)
                     y_pred = sm.predict_values(x_cand).flatten()
-                    # Kriging Believer: Add point with predicted mean and retrain GP quickly
                     sm_temp = KRG(theta0=sm.optimal_theta, n_start=1, print_global=False, eval_noise=True, nugget=1e-8, design_space=self.design_space)
                     sm_temp.set_training_values(np.vstack((self.X, x_cand)), np.append(self.y, y_pred))
                     sm_temp.train()
@@ -190,7 +191,9 @@ class ActiveLearningXAI:
                     x_opt = np.atleast_2d(x_opt)
                 ei = explicit_ei(x_opt, surro, y_min_observed)
                 
-                if getattr(self, 'mode', 'v4') == 'v6':
+                if alpha == 1.0:
+                    sigma = 0.0
+                elif getattr(self, 'mode', 'v4') == 'v6':
                     sigma = compute_imse_reduction(x_opt)
                 else:
                     var = sm.predict_variances(x_opt)
@@ -203,31 +206,17 @@ class ActiveLearningXAI:
 
             bounds = [(v.lower, v.upper) for v in self.design_space.design_variables]
             
-            from scipy.optimize import minimize
+            from scipy.optimize import differential_evolution
             
-            # --- FAST HYBRID OPTIMIZATION ---
-            # 1. Evaluate discrete LHS grid
-            x_candidates = self.samp(100)
-            obj_vals = [objective(xc)[0] for xc in x_candidates]
+            # --- FAST HYBRID OPTIMIZATION (DFO) ---
+            # 1. Generate discrete LHS grid to use as the initial population
+            x_candidates = self.samp(50)
             
-            # 2. Take top 3 best points
-            top_indices = np.argsort(obj_vals)[:3]
-            best_x_starts = x_candidates[top_indices]
+            # 2. Run Differential Evolution starting strictly from this 50-point population
+            # This completely avoids gradient issues and acts as a robust global DFO
+            res = differential_evolution(objective, bounds, init=x_candidates, maxiter=5)
             
-            # 3. Refine with L-BFGS-B (SLSQP)
-            best_obj = float('inf')
-            best_x = best_x_starts[0]
-            
-            for start_pt in best_x_starts:
-                res = minimize(objective, start_pt, method="SLSQP", bounds=bounds, options={'maxiter': 20})
-                # SciPy objective functions can sometimes return arrays
-                val = res.fun[0] if isinstance(res.fun, (np.ndarray, list)) else res.fun
-                if val < best_obj:
-                    best_obj = val
-                    best_x = res.x
-                    
-            # Evaluate new point
-            best_x = np.atleast_2d(best_x)
+            best_x = np.atleast_2d(res.x)
             new_y = self.simulator_func(best_x)
             
             self.X = np.vstack((self.X, best_x))

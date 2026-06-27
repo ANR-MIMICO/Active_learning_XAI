@@ -13,9 +13,9 @@ def plot_pca():
     
     methods = [
         ("tmp_lhs_42", "LHS"),
-        ("tmp_sur_42", "Space-US"),
+        ("tmp_v6_sur_42", "IMSE-US"),
         ("tmp_sur_shap_42", "SHAP-US"),
-        ("tmp_v5_42", "Dynamic-US")
+        ("tmp_v6_dyn_42", "Dynamic-US")
     ]
     
     lhs_file = os.path.join(results_dir, "tmp_lhs_42", "al_database.csv")
@@ -49,8 +49,8 @@ def plot_pca():
     Z = Z.reshape(xx.shape)
     
     methods = [("lhs", "LHS"), 
-               ("sur_shap", "SHAP-CS"), 
                ("v6_sur", "IMSE-US"),
+               ("sur_shap", "SHAP-US"), 
                ("v6_dyn", "Dynamic-US")]
                
     seeds = [42, 100, 2026, 777, 12345]

@@ -106,31 +106,35 @@ Consequently, this framework achieves a deep structural understanding with fewer
 \tableofcontents
 
 \section{Introduction}
-Simulations of complex socio-technical systems, such as Agent-Based Models (ABMs), are vital for understanding emergent phenomena[cite: 15]. However, the exploration of their parameter spaces is often bottlenecked by high computational costs and the high dimensionality of the models[cite: 1]. These simulators generally act as non-differentiable black boxes, rendering traditional gradient-based optimization ineffective. 
+Simulations of complex socio-technical systems, such as Agent-Based Models (ABMs), are vital for understanding emergent phenomena. However, the exploration of their parameter spaces is often bottlenecked by high computational costs and the high dimensionality of the models. These simulators generally act as non-differentiable black boxes, rendering traditional gradient-based optimization ineffective. 
 
-To reduce the computational burden of sampling-intensive tasks, researchers traditionally employ surrogate models (e.g., Kriging/Gaussian Processes) coupled with sampling strategies like static Design of Experiments (DoE) or adaptive sampling via Bayesian Optimization[cite: 2, 31]. While these methods excel at minimizing global prediction error or finding global optima, they fall short in uncovering the diverse causal mechanisms that drive system behavior. They frequently miss complex behavioral regimes where different parameter combinations yield similar macroscopic outputs for entirely different internal reasons.
+In dynamical systems, tipping points are classically viewed as mathematical discontinuities or bifurcations where the state derivative approaches infinity (Scheffer et al., 2009). Proving such true analytical discontinuities is impossible from finite samples in stochastic, derivative-free ABMs. Therefore, we mathematically relax this constraint: instead of seeking an infinite gradient, we define a generalized tipping point as a localized region exhibiting an exceptionally high Lipschitz constant, estimated locally as $L_\epsilon(x) = \sup_{x' \in \mathcal{B}(x, \epsilon)} \frac{|f(x) - f(x')|}{||x - x'||_2}$. By systematically targeting regions where the model's causal logic undergoes abrupt, massive shifts, we can locate these out-of-equilibria phase transitions without solving differential equations.
 
-To address this, we introduce a model-agnostic Active Learning framework that couples Surrogate Modeling with Explainable Artificial Intelligence (XAI)[cite: 19]. Rather than targeting prediction uncertainty, our approach actively hunts for "new explanations." By utilizing tools such as SHAP (SHapley Additive exPlanations) to interpret feature contributions[cite: 16], our methodology iteratively samples points that exhibit rare or unseen explanatory profiles, efficiently mapping the boundaries of complex system behaviors and tipping points.
+To reduce the computational burden of sampling-intensive tasks, researchers traditionally employ surrogate models (e.g., Kriging/Gaussian Processes) coupled with sampling strategies like static Design of Experiments (DoE) or adaptive sampling via Bayesian Optimization. While these methods excel at minimizing global prediction error or finding global optima, they fall short in uncovering the diverse causal mechanisms that drive system behavior. They frequently miss complex behavioral regimes where different parameter combinations yield similar macroscopic outputs for entirely different internal reasons.
+
+To address this, we introduce a model-agnostic Active Learning framework that couples Surrogate Modeling with Explainable Artificial Intelligence (XAI). Rather than targeting prediction uncertainty, our approach actively queries for "new explanations." By utilizing tools such as SHAP (SHapley Additive exPlanations) to interpret feature contributions, our methodology iteratively samples points that exhibit rare or unseen explanatory profiles, efficiently mapping the boundaries of complex system behaviors and tipping points.
 
 \section{Methods}
-Our proposed methodology relies on an iterative Bayesian active learning loop designed to maximize explanatory diversity[cite: 19]. The workflow consists of five primary steps:
+To operationalize the search for novel explanations introduced above, we developed a five-step framework. Our proposed methodology relies on an iterative Bayesian active learning loop designed to maximize explanatory diversity[cite: 19]. The workflow consists of five primary steps:
 
 \begin{enumerate}
-    \item \textbf{Initial Dataset Generation:} We begin by sampling an initial set of $n_{doe}$ points within the feature design space using Latin Hypercube Sampling (LHS)[cite: 40]. These points, denoted as $x_{doe}$, are then evaluated using the expensive black-box simulator to obtain the true outputs, $y_{doe}$[cite: 41].
+    \item \textbf{Pre-Processing: Handling ABM Stochasticity:} Agent-Based Models are inherently stochastic. To construct a reliable deterministic surrogate model (Kriging), we must "remove" this aleatoric noise by estimating the true mean response. We dynamically execute replications until the variance of the mean stabilizes, verified online using an F-test (Fisher test) to ensure sufficient statistical power and minimize Type-II false negatives (Secchi \& Seri, 2017; Lorscheid et al., 2012).
     
-    \item \textbf{Explanation Inputs and Surrogate Training:} To bypass the cost of generating explanations directly from the simulator, we train a noisy Gaussian Process (GP) on the initial dataset $\{x_{doe}, y_{doe}\}$[cite: 49]. We then sample $n_{xpl\_lowfi}$ low-fidelity points ($x_{xpl\_lowfi}$) in the design space[cite: 48]. Using the GP as a proxy, we compute ExactSHAP values for both the evaluated points and the low-fidelity points ($x_{xpl\_lowfi} \cup x_{doe}$)[cite: 50]. 
+    \item \textbf{Initial Dataset Generation (The LHS-ESE Baseline):} We compare our approach against the gold-standard static DoE: Latin Hypercube Sampling optimized via Enhanced Stochastic Evolutionary (LHS-ESE). Formulated as a constrained optimization problem, it globally minimizes the Minkowski norm ($L_p$) of the inverse of the Euclidean distances in the search space ($\Phi_p$ criterion by Morris \& Mitchell) using the discrete combinatorial ESE algorithm (Jin et al., 2005). We generate an initial set of $n_{doe}$ points within the feature design space and evaluate them using the simulator to obtain the deterministic outputs $y_{doe}$.
     
-    \item \textbf{Explanation Novelty via Fast Proxy:} To bypass the curse of dimensionality inherent in high-dimensional KDE, where $L_2$ distances suffer from the concentration of measure, we quantify the novelty of an explanation using a Fast Density Proxy via Cosine Distance (Nearest Neighbors) on the generated SHAP values. By focusing on the directional alignment of feature contributions, the proxy preserves the local manifold structure. We define the density proxy as:
+    \item \textbf{Explanation Inputs and Constructing the Dual Space:} We map the physical space to a causal explanatory space using cooperative game theory. For any feature coalition $S \subseteq F$, the SHAP value function is defined as the conditional expectation $v(S) = \mathbb{E}[f(X) \mid X_S = x_S]$. The exact combinatorial feature contributions are computed as $\phi_i(x) = \sum_{S \subseteq F \setminus \{i\}} \frac{|S|! (|F| - |S| - 1)!}{|F|!} (v(S \cup \{i\}) - v(S))$. These SHAP values distribute the exact difference between the local prediction and the global average: $\sum \phi_i(x) = f(x) - \mathbb{E}[f(X)]$, mapping each physical point $x$ to its local explanatory profile $S(x)$. To bypass the cost of generating explanations directly from the simulator, we train a noisy Gaussian Process (GP) on the initial dataset $\{x_{doe}, y_{doe}\}$. We then sample $n_{xpl\_lowfi}$ low-fidelity points ($x_{xpl\_lowfi}$) in the design space. Using the GP as a proxy, we compute ExactSHAP values for both the evaluated points and the low-fidelity points. Crucially, we use the initial stationary LHS sample as the fixed background reference to ensure the explanatory space remains historically comparable across active learning iterations. 
+    
+    \item \textbf{Explanation Novelty via Fast Proxy:} To bypass the curse of dimensionality inherent in high-dimensional KDE, where $L_2$ distances suffer from the concentration of measure, we quantify the novelty of an explanation using a Fast Density Proxy via Cosine Distance (Nearest Neighbors) on the generated SHAP values. By focusing on the directional alignment of feature contributions, the proxy preserves the local manifold structure. We define the density proxy as the average cosine distance over the $k$ nearest neighbors:
     \begin{equation}
-        \rho_{proxy}(x) \propto \exp\left(-\gamma \cdot d_{cos}(S(x), \mathcal{S}_{hist}^{(k)})\right)
+        \rho_{proxy}(x) \propto \exp\left( -\gamma \cdot \frac{1}{k} \sum_{j=1}^k \left(1 - \frac{S(x) \cdot S_{(j)}}{||S(x)|| \, ||S_{(j)}||}\right) \right)
     \end{equation}
-    where $d_{cos}$ is the cosine distance to the $k$-th nearest neighbor in the historical SHAP set $\mathcal{S}_{hist}$. This yields a novelty metric $y_{nov\_total}$[cite: 61]. The dataset is split into high-fidelity novelties ($y_{nov\_high}$ corresponding to $x_{doe}$) and low-fidelity novelties ($y_{nov\_low}$ corresponding to $x_{xpl\_lowfi}$)[cite: 62]. Areas with high cosine distance indicate rare or novel explanatory structures.
+    This yields a novelty metric $y_{nov\_total}$[cite: 61]. The dataset is split into high-fidelity novelties ($y_{nov\_high}$ corresponding to $x_{doe}$) and low-fidelity novelties ($y_{nov\_low}$ corresponding to $x_{xpl\_lowfi}$)[cite: 62]. Areas with high cosine distance indicate rare or novel explanatory structures.
     
-    \item \textbf{Dynamic Hybrid Bayesian Optimization (Dynamic-US):} We construct a Multi-Fidelity Gaussian Process (MFGP) using the combined datasets: $[\{x_{doe}, y_{nov\_high}\}, \{x_{xpl\_lowfi}, y_{nov\_low}\}]$[cite: 80]. Rather than purely optimizing explanatory novelty, we frame the acquisition strategy as a bi-objective optimization problem. The goal is to simultaneously maximize physical exploration (the predictive variance $\sigma^2_{GP}(x)$ in the input space) and maximize explanatory exploitation (the novelty derived from cosine distance to the historical SHAP dataset, represented by $\text{EI}_{MFK}$). We solve this using a dynamic linear scalarization that also acts as a modified Integrated Mean Squared Error (IMSE) minimization:
+    \item \textbf{Dynamic Hybrid Bayesian Optimization (Dynamic-US):} We construct a Multi-Fidelity Gaussian Process (MFGP) using the combined datasets: $[\{x_{doe}, y_{nov\_high}\}, \{x_{xpl\_lowfi}, y_{nov\_low}\}]$[cite: 80]. Rather than purely optimizing explanatory novelty, we frame the acquisition strategy as a bi-objective optimization problem. The goal is to simultaneously \textbf{minimize} physical uncertainty (the Integrated Mean Squared Error $\text{IMSE}_{MC}(x)$) and \textbf{maximize} explanatory exploitation (the novelty derived from cosine distance to the historical SHAP dataset, represented by $\text{EI}_{MFK}(x)$). We formalize physical exploration as a Stepwise Uncertainty Reduction (SUR) strategy: $\Delta\text{IMSE}(x) = \int_{\mathcal{X}} \left( \sigma^2_n(x') - \sigma^2_{n+1}(x' \mid x) \right) \text{d}x'$, approximated via a discrete Monte-Carlo grid. Because we actively maximize the acquisition function, we scalarize the problem utilizing dynamic min-max normalization to prevent magnitude domination and outlier collapse:
     \begin{equation}
-        a_{Dynamic}(x) = (1 - \alpha^{(t)}) \cdot \text{IMSE}_{MC}(x) + \alpha^{(t)} \cdot \widetilde{\text{EI}}_{MFK}(S(x))
+        a_{Dynamic}(x) = (1 - \alpha^{(t)}) \cdot \frac{\Delta\text{IMSE}_{MC}(x) - \min}{\max - \min} + \alpha^{(t)} \cdot \frac{\widetilde{\text{EI}}_{MFK}(x) - \min}{\max - \min}
     \end{equation}
-    where $\text{IMSE}_{MC}(x)$ represents the variance reduction measured across a discrete Monte-Carlo grid $X_{MC}$ assuming the Kriging Believer heuristic (where the model is tentatively updated with its own mean prediction at $x$). The parameter $\alpha^{(t)}$ smoothly sweeps the Pareto front across iterations via a dynamic schedule $\alpha^{(t)} = \alpha_{start} + (\alpha_{end} - \alpha_{start}) \frac{t}{T}$. This acquisition surface is optimized globally using a fast Hybrid Optimizer (Discrete LHS search followed by an SLSQP refinement) to identify the next optimal sampling point, $x_{opt}$, blending physical uncertainty reduction with explanation-driven novelty[cite: 81].
+    The parameter $\alpha^{(t)}$ smoothly sweeps the Pareto front across iterations via a dynamic schedule $\alpha^{(t)} = \alpha_{start} + (\alpha_{end} - \alpha_{start}) \frac{t}{T}$. To ensure robust asymptotic convergence, we bound the exploration-exploitation trade-off using $\alpha_{start} = 0.01$ and $\alpha_{end} = 0.90$. This highly multimodal acquisition surface is optimized globally using a Derivative-Free Mixed-Integer Differential Evolution algorithm initialized with a uniform LHS population[cite: 81]. Ultimately, by balancing physical uncertainty with explanatory novelty, the algorithm is forced to sample the exact parameter boundaries where the model's internal logic shifts, successfully isolating the tipping points.
     
     \item \textbf{Update:} The expensive black-box simulator is queried at the new point $x_{opt}$ to retrieve $y_{opt}$[cite: 102]. The exact dataset is then updated ($x_{doe} := x_{doe} \cup x_{opt}$ and $y_{doe} := y_{doe} \cup y_{opt}$), and the loop repeats[cite: 103, 104].
 \end{enumerate}
@@ -145,9 +149,9 @@ The proposed methodology inherently performs a dynamic dimensionality reduction.
 
 \vspace{2mm}
 \tcp{Step 1: Initial Dataset Generation}
-Sample $n_{doe}$ points $x_{doe}$ in $\mathcal{X}$ using Latin Hypercube Sampling (LHS)\;
-Evaluate black-box simulator: $y_{doe} \leftarrow f(x_{doe})$\;
-Initialize dataset $\mathcal{D} \leftarrow \{x_{doe}, y_{doe}\}$\;
+Optimize an initial Latin Hypercube Sample (LHS-ESE) of size $n_{doe}$ by minimizing the Minkowski distance $\Phi_p$\;
+Execute an initial $R_{min}$ replications per point. \textbf{While} F-statistic $>$ critical value, increment $R$ and simulate to estimate the true mean response: $\hat{y}_{doe} \leftarrow \mathbb{E}[f(x_{doe})]$\;
+Initialize dataset $\mathcal{D} \leftarrow \{x_{doe}, \hat{y}_{doe}\}$\;
 Initialize dynamic scalarization weight: $\alpha^{(0)} \leftarrow \alpha_{start}$\;
 Define step size $\Delta \alpha = \frac{\alpha_{end} - \alpha_{start}}{N - n_{doe} - 1}$\;
 Initialize iteration counter $t \leftarrow 0$\;
@@ -159,7 +163,7 @@ Initialize iteration counter $t \leftarrow 0$\;
     \tcp{Step 2: Explanation Inputs and Surrogate Training}
     Train a noisy Gaussian Process (GP) on the current dataset $\mathcal{D}$\;
     Sample $n_{xpl\_lowfi}$ points $x_{xpl\_lowfi}$ in $\mathcal{X}$\;
-    Compute ExactSHAP values $S$ for $(x_{xpl\_lowfi} \cup x_{doe})$ using the GP as a proxy, with $x_{doe}$ as the background reference\;
+    \textbf{If} dimension $M > 15$, utilize KernelSHAP approximation to constrain complexity; \textbf{Else}, compute ExactSHAP values $S$ for $(x_{xpl\_lowfi} \cup x_{doe})$ using the GP as a proxy, with the stationary initial LHS as the background reference\;
     
     \vspace{2mm}
     \tcp{Step 3: Explanation Novelty}
@@ -171,15 +175,17 @@ Initialize iteration counter $t \leftarrow 0$\;
 
     \vspace{2mm}
     \tcp{Step 4: Dynamic Hybrid Bayesian Optimization}
-    Find the next optimal point $x_{opt}$ by maximizing the Dynamic Hybrid Acquisition function (balancing Monte-Carlo IMSE and MFGP Expected Improvement) via a Discrete LHS Search refined by SLSQP:\;
-    $x_{opt} = \arg\max_{x \in \mathcal{X}} \left[ (1 - \alpha^{(t)}) \cdot \text{IMSE}_{MC}(x) + \alpha^{(t)} \cdot \widetilde{\text{EI}}_{MFK}(S(x)) \right]$\;
+    Generate an LHS initial population $\mathcal{P}_{init}$ of size 50 to ensure optimal spatial coverage\;
+    Solve the optimization problem using a global Derivative-Free Mixed-Integer Differential Evolution initialized with $\mathcal{P}_{init}$\;
+    To prevent magnitude domination, objectives are dynamically normalized relative to their minimums and maximums observed in the current Differential Evolution generation:\;
+    $x_{opt} = \arg\max_{x \in \mathcal{X}} \left[ (1 - \alpha^{(t)}) \cdot \frac{\Delta\text{IMSE}_{MC}(x) - \min}{\max - \min} + \alpha^{(t)} \cdot \frac{\widetilde{\text{EI}}_{MFK}(x) - \min}{\max - \min} \right]$\;
     
     \vspace{2mm}
     \tcp{Step 5: Update}
-    Evaluate the expensive black-box at the new point: $y_{opt} \leftarrow f(x_{opt})$\;
+    Execute an initial $R_{min}$ replications at the new point $x_{opt}$. \textbf{While} F-statistic $>$ critical value, increment $R$ and simulate to estimate the mean response: $\hat{y}_{opt} \leftarrow \mathbb{E}[f(x_{opt})]$\;
     Update inputs: $x_{doe} \leftarrow x_{doe} \cup \{x_{opt}\}$\;
-    Update outputs: $y_{doe} \leftarrow y_{doe} \cup \{y_{opt}\}$\;
-    Update dataset: $\mathcal{D} \leftarrow \{x_{doe}, y_{doe}\}$\;
+    Update outputs: $\hat{y}_{doe} \leftarrow \hat{y}_{doe} \cup \{\hat{y}_{opt}\}$\;
+    Update dataset: $\mathcal{D} \leftarrow \{x_{doe}, \hat{y}_{doe}\}$\;
     Update scalarization weight: $\alpha^{(t+1)} \leftarrow \alpha^{(t)} + \Delta \alpha$\;
     $t \leftarrow t + 1$\;
 }
@@ -196,62 +202,113 @@ To evaluate the framework's ability to uncover distinct internal logic, we analy
 
 Conversely, our active learning loop, driven by Kernel Density Estimation (KDE) on SHAP values, explicitly populates the sparse "tails" and isolated clusters of the distribution. For example, the SHAP beeswarm plot reveals distinct behavioral regimes, such as isolated instances where low \textit{Map size} or low \textit{Density} dominate the model's convergence state. 
 
-These low-density, high-impact regions represent critical tipping points in the Agent-Based Model. By treating the SHAP density as a low-fidelity information source in the Multi-Fidelity Gaussian Process (MFGP), the optimization successfully targets these boundaries. The resulting dataset achieves a higher explanatory diversity, ensuring that the surrogate model not only predicts the output accurately but captures the diverse causal mechanisms that drive those predictions.
+These low-density, high-impact regions represent critical tipping points in the Agent-Based Model, identified by systematically targeting exceptionally high Lipschitz constants (extreme finite-difference variations) in the explanatory manifold. By treating the SHAP density as a low-fidelity information source in the Multi-Fidelity Gaussian Process (MFGP), the optimization successfully targets these boundaries. The resulting dataset achieves a higher explanatory diversity, ensuring that the surrogate model not only predicts the output accurately but captures the diverse causal mechanisms that drive those predictions.
 \section{Results}
-\subsection{Overcoming the Curse of Dimensionality in Sampling}
-To validate the framework rapidly, initial testing was conducted using a Multi-Layer Perceptron (MLPClassifier and MLPRegressor) trained as a proxy stand-in for the expensive ABM simulator[cite: 115]. The parameter space explored included five features: \textit{Number of Types}, \textit{Density}, \textit{Intolerance threshold}, \textit{Map size}, and \textit{Perception distance}[cite: 35]. 
+Having established the theoretical mechanism of the Dynamic-US framework, we now evaluate its ability to empirically isolate tipping points. To validate the framework, testing was conducted on two robust Agent-Based Models: the Schelling segregation model and the MASTIO industrial symbiosis model. For both models, we compare the baseline LHS-ESE strategy against pure physical uncertainty reduction (IMSE-US), pure explanatory novelty (SHAP-US), and our proposed hybrid approach (Dynamic-US).
 
-The target outputs analyzed were the system's \textit{Sparsity} (a continuous metric) and its \textit{Convergence} state (a boolean metric)[cite: 106]. The active learning loop was initialized with $N=10$ points and progressed up to $N=100$ iterations[cite: 106]. 
-
-Visualization of the "Evolution of Sparsity vs Features" demonstrates the algorithm's sampling behavior over iterations[cite: 106]. The dynamic sampling successfully separates converged instances from non-converged instances, actively populating regions of the feature space that exhibit rare SHAP value combinations, thereby isolating the boundaries where the system tips between convergence states.
-
+\subsection{Targeting Tipping Points in Parameter Space}
+Traditional space-filling designs suffer from the curse of dimensionality, spreading samples uniformly and missing critical transition boundaries.
 \begin{figure}[hbt!]
     \centering
-    \includegraphics[width=0.8\textwidth]{Images/schelling_final_hybrid_diff_profile.png}
-    \caption{Hybrid density difference profile (\textbf{Dynamic-US minus LHS}). Green regions indicate narrow parameter bands intentionally over-sampled by the active learner, while red regions are actively ignored. By avoiding the curse of dimensionality inherent in purely global exploration, Dynamic-US aggressively targets specific boundary regions where the multi-dimensional tipping points reside.}
+    \begin{subfigure}{0.49\textwidth}
+        \includegraphics[width=\textwidth]{Images/Schelling/hybrid_diff_profile.png}
+        \caption{Schelling}
+    \end{subfigure}
+    \begin{subfigure}{0.49\textwidth}
+        \includegraphics[width=\textwidth]{Images/MASTIO/hybrid_diff_profile.png}
+        \caption{MASTIO}
+    \end{subfigure}
+    \caption{Hybrid density difference profile (\textbf{Dynamic-US minus LHS}). Green regions indicate narrow parameter bands intentionally over-sampled by the active learner, while red regions are actively ignored.}
     \label{fig:hybrid_diff}
 \end{figure}
 
+As shown by the 1D parameter histograms, the algorithm dynamically identifies and over-samples the specific parameter values where the system's logic fundamentally changes.
 \begin{figure}[hbt!]
     \centering
-    \includegraphics[width=0.8\textwidth]{Images/schelling_input_space_comparison_2D_frontier.png}
-    \caption{2D Input Space Comparison showing the targeted boundary frontier. Unlike uniform space-filling designs, our approach tightly clusters samples along the non-linear boundaries where macroscopic phase transitions occur, explicitly tracking the tipping points.}
-    \label{fig:schelling_frontier}
+    \begin{subfigure}{0.49\textwidth}
+        \includegraphics[width=\textwidth]{Images/Schelling/1d_histograms_variables.png}
+        \caption{Schelling 1D Histograms}
+    \end{subfigure}
+    \begin{subfigure}{0.49\textwidth}
+        \includegraphics[width=\textwidth]{Images/MASTIO/1d_histograms_variables.png}
+        \caption{MASTIO 1D Histograms}
+    \end{subfigure}
+    \caption{Parameter space sampling distribution. The hybrid method explicitly targets specific parameter thresholds corresponding to tipping points rather than uniformly mapping the space.}
+    \label{fig:1d_histograms}
 \end{figure}
 
-\subsection{Identifying Tipping Points in the Explanatory Space}
-The efficacy of the proposed active learning framework is visually demonstrated in the SHAP beeswarm plot. Unlike traditional space-filling designs that tend to over-sample homogenous regions resulting in dense clustering around zero impact, our approach explicitly populates the sparse, high-impact tails of the distribution.
-
+\subsection{Tracking Tipping Points in Explanatory Space}
+To visualize the exploration in the causal domain, we project the high-dimensional SHAP values into a 2D space using Principal Component Analysis (PCA). 
 \begin{figure}[hbt!]
     \centering
-    \includegraphics[width=0.8\textwidth]{Images/shap_RF_conv(1).png}
-    \caption{SHAP summary plot for model convergence. Traditional space-filling designs suffer from the curse of dimensionality, often over-sampling the homogeneous bulk (clustering near zero). Conversely, our active learning loop explicitly uncovers isolated "islands" of feature contributions. These sparse regions represent critical internal logic shifts in the explanatory space, directly corresponding to the system's physical tipping points.}
-    \label{fig:shap_conv}
+    \begin{subfigure}{0.49\textwidth}
+        \includegraphics[width=\textwidth]{Images/Schelling/tipping_points_pca.png}
+        \caption{Schelling PCA Evolution}
+    \end{subfigure}
+    \begin{subfigure}{0.49\textwidth}
+        \includegraphics[width=\textwidth]{Images/MASTIO/tipping_points_pca.png}
+        \caption{MASTIO PCA Evolution}
+    \end{subfigure}
+    \caption{PCA projection of the SHAP explanatory space for all methods. Dynamic-US efficiently tracks the non-linear boundaries where physical tipping points reside by actively querying for explanatory novelty.}
+    \label{fig:pca_all}
 \end{figure}
 
-As observed in the distribution for the \textit{Intolerance threshold}, the algorithm successfully identifies and samples distinct, isolated clusters of SHAP values at the extreme ends of the spectrum (e.g., at $-0.4$ and $+0.6$). These low-density "islands" correspond to critical tipping points where the system transitions between behavioral regimes. Similarly, for features with low global variance such as \textit{Map size}, the optimization loop successfully targets the rare edge cases where the feature suddenly dominates the output. This confirms that the framework effectively maximizes explanatory diversity, uncovering rare causal mechanisms that standard prediction-error-focused samplers would likely miss.
-
-
-\section{Analysis}
-The integration of SHAP values with the Fast Cosine Proxy provides a robust metric for "explanatory novelty." By optimizing the MFGP to seek out rare SHAP profiles, the Active Learning loop avoids redundantly sampling regions where the causal mechanics are already well-understood[cite: 65, 84].
-
-\subsection{Macroscopic Ruptures in Parameter Space}
-Furthermore, the utilization of Partial Dependence Plots (PDP) and Individual Conditional Expectation (ICE) plots—colored by density—reveals complex, non-linear feature interactions[cite: 107]. For instance, tracking metrics such as the \textit{price index} against variables like \textit{density} highlights sharp divergences in system behavior[cite: 107]. 
-
 \begin{figure}[hbt!]
     \centering
-    \includegraphics[width=0.8\textwidth]{Images/cireco_pdp_ice_density_price.png}
-    \caption{Partial Dependence (PDP) and Individual Conditional Expectation (ICE) plots colored by sampling density. This visualization illustrates macroscopic ruptures in the parameter space (e.g., sharp divergence at specific density thresholds). When paired with explanatory shifts, these divergences reveal the system's "dual tipping points"—critical phase transitions in both the physical predictions and the underlying causal mechanisms, mapped efficiently without exhaustive simulation.}
-    \label{fig:pdp_ice}
+    \begin{subfigure}{0.49\textwidth}
+        \includegraphics[width=\textwidth]{Images/Schelling/tipping_points_pca_final_shap.png}
+        \caption{Schelling Final SHAP Space}
+    \end{subfigure}
+    \begin{subfigure}{0.49\textwidth}
+        \includegraphics[width=\textwidth]{Images/MASTIO/tipping_points_pca_final_shap.png}
+        \caption{MASTIO Final SHAP Space}
+    \end{subfigure}
+    \caption{By securing physical boundaries before pivoting to explanatory novelty, Dynamic-US identifies the true underlying transition boundaries better than pure SHAP novelty search, which often gets trapped in inaccurate surrogate spaces.}
+    \label{fig:pca_final}
 \end{figure}
 
-The active learning framework successfully maps these critical behavioral thresholds (tipping points) using significantly fewer evaluations than would be required by purely random or prediction-error-focused sampling[cite: 19]. 
-
-\subsection{Dual Space Efficiency}
+\subsection{Impact on Output Space and Dual Efficiency}
+The ability to map the explanatory boundaries translates directly into discovering extreme variations in the output space.
 \begin{figure}[hbt!]
     \centering
-    \includegraphics[width=0.8\textwidth]{Images/cireco_final_dual_space_efficiency.png}
-    \caption{Evaluation of exploration efficiency across physical (left) and explanatory (right) spaces. While traditional methods increase physical entropy linearly, the Dynamic-US strategy achieves a rapid, non-linear gain in explanatory entropy. This "dual space efficiency" proves that prioritizing explanatory novelty simultaneously accelerates the discovery of complex physical tipping points, drastically reducing the overall simulation budget.}
+    \begin{subfigure}{0.49\textwidth}
+        \includegraphics[width=\textwidth]{Images/Schelling/tipping_point_distribution.png}
+        \caption{Schelling Output Space}
+    \end{subfigure}
+    \begin{subfigure}{0.49\textwidth}
+        \includegraphics[width=\textwidth]{Images/MASTIO/tipping_point_distribution.png}
+        \caption{MASTIO Output Space}
+    \end{subfigure}
+    \caption{Distribution of evaluated points relative to the physical tipping point threshold. The active learning loop explicitly populates the sparse, high-impact regions of the output.}
+    \label{fig:output_space}
+\end{figure}
+
+Ultimately, evaluating the framework's convergence demonstrates its "dual space efficiency."
+\begin{figure}[hbt!]
+    \centering
+    \begin{subfigure}{0.49\textwidth}
+        \includegraphics[width=\textwidth]{Images/Schelling/all_metrics_evolution.png}
+        \caption{Schelling Metrics Evolution}
+    \end{subfigure}
+    \begin{subfigure}{0.49\textwidth}
+        \includegraphics[width=\textwidth]{Images/MASTIO/all_metrics_evolution.png}
+        \caption{MASTIO Metrics Evolution}
+    \end{subfigure}
+    \caption{Evolution of physical and explanatory entropy over iterations. Dynamic-US balances both objectives effectively.}
+    \label{fig:metrics_evolution}
+\end{figure}
+
+\begin{figure}[hbt!]
+    \centering
+    \begin{subfigure}{0.49\textwidth}
+        \includegraphics[width=\textwidth]{Images/Schelling/dual_space_efficiency.png}
+        \caption{Schelling Dual Efficiency}
+    \end{subfigure}
+    \begin{subfigure}{0.49\textwidth}
+        \includegraphics[width=\textwidth]{Images/MASTIO/dual_space_efficiency.png}
+        \caption{MASTIO Dual Efficiency}
+    \end{subfigure}
+    \caption{SHAP Entropy Gain vs Physical Entropy Gain. Dynamic-US achieves a rapid, non-linear gain in explanatory entropy while preserving classical SUR space-filling properties.}
     \label{fig:dual_space}
 \end{figure}
 
@@ -260,9 +317,9 @@ The primary advantage of this framework is its shift in focus from prediction ac
 
 However, there are current limitations regarding scalability. Computing ExactSHAP values, even on a fast GP surrogate, incurs a computational overhead of $\mathcal{O}(2^M)$ that scales exponentially with dimensionality $M$[cite: 50]. While the transition from classical KDE ($\mathcal{O}(N \cdot d)$ with complex bandwidth selection) to the Fast Cosine Proxy ($\mathcal{O}(N \log N)$) resolved the novelty estimation bottleneck, surrogate inference remains the primary limiting factor for scaling to $M > 15$ parameters.
 
-From an operations research perspective, several mathematical enhancements could further robustify the acquisition process. First, the current linear scalarization of the bi-objective optimization could be replaced with Expected Hypervolume Improvement (EHVI) or NSGA-II to properly identify non-convex regions of the Pareto front. Second, the highly multimodal and non-stationary nature of the SHAP novelty landscape suggests that upgrading the current Differential Evolution acquisition optimizer to Covariance Matrix Adaptation Evolution Strategy (CMA-ES), or employing Trust-Region Bayesian Optimization (TuRBO), would significantly improve surrogate calibration and convergence.
+From an operations research perspective, several mathematical enhancements have been integrated to robustify the acquisition process. The highly multimodal and non-stationary nature of the SHAP novelty landscape suggested that continuous gradient-based solvers like SLSQP were prone to local minima. By employing a global Derivative-Free Optimization (DFO) approach—specifically, Differential Evolution initialized directly from the Space-Filling LHS candidates—the surrogate calibration and convergence are significantly improved. Future work could explore replacing the linear scalarization of the bi-objective optimization with Expected Hypervolume Improvement (EHVI) or NSGA-II to properly identify non-convex regions of the Pareto front.
 
-Immediate next steps for this research include:
+Immediate next steps and future perspectives for this research include:
 \begin{itemize}
     \item Quantifying the density shift during optimization to explicitly map where new points are added relative to the initial DoE[cite: 113].
     \item Adding input replications to improve the robustness of the Bayesian optimization under noise[cite: 114].
@@ -270,10 +327,10 @@ Immediate next steps for this research include:
     \item Expanding the evaluation to include other diverse test cases to ensure generalization[cite: 116].
 \end{itemize}
 
-\section{Conclusions and perspectives}
+\section{Conclusions}
 We have presented a Black-box Active Learning framework that leverages Surrogate Modeling and Explainable AI to drive the exploration of complex systems[cite: 19]. By structuring an active learning loop around the maximization of explanatory diversity, the algorithm efficiently uncovers distinct causal mechanisms and rare behavioral regimes within high-dimensional parameter spaces.
 
-Future perspectives center on refining the methodology's resilience to surrogate noise and applying the framework directly to computationally intensive Agent-Based Models[cite: 114, 115]. Ultimately, this explainability-driven approach provides a pathway from raw simulation data to actionable, interpretable insights for complex decision-making processes[cite: 13, 16].
+Ultimately, this explainability-driven approach provides a pathway from raw simulation data to actionable, interpretable insights for complex decision-making processes[cite: 13, 16].
 
 \section*{Conflict of interest}
 The authors have no conflict of interest to declare.
