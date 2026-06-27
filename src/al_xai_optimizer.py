@@ -68,7 +68,7 @@ def explicit_ei(x, sm, y_min):
     return ei
 
 class ActiveLearningXAI:
-    def __init__(self, simulator_func, design_space, x_initial, y_initial, alpha_start=0.01, alpha_end=0.90, total_loops=50, mode='v6'):
+    def __init__(self, simulator_func, design_space, x_initial, y_initial, alpha_start=0.01, alpha_end=0.90, total_loops=50, mode='v6', seed=42):
         self.simulator_func = simulator_func
         self.design_space = design_space
         self.X = np.array(x_initial)
@@ -77,7 +77,8 @@ class ActiveLearningXAI:
         self.alpha_end = alpha_end
         self.total_loops = total_loops
         self.mode = mode
-        self.samp = LHS(xlimits=design_space.get_num_bounds(), criterion="ese")
+        self.seed = seed
+        self.samp = LHS(xlimits=design_space.get_num_bounds(), criterion="ese", seed=self.seed)
         
     def run(self, output_dir="data/processed/v4"):
         os.makedirs(output_dir, exist_ok=True)
@@ -214,7 +215,7 @@ class ActiveLearningXAI:
             
             # 2. Run Differential Evolution starting strictly from this 50-point population
             # This completely avoids gradient issues and acts as a robust global DFO
-            res = differential_evolution(objective, bounds, init=x_candidates, maxiter=5)
+            res = differential_evolution(objective, bounds, init=x_candidates, maxiter=5, seed=self.seed)
             
             best_x = np.atleast_2d(res.x)
             new_y = self.simulator_func(best_x)
